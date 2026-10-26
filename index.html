@@ -264,6 +264,48 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       box-shadow: 0 0 14px rgba(245, 197, 66, 0.4);
     }
 
+    /* Prominent Top Bar Exit Button */
+    .btn-exit-header {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: var(--radius-chip);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(185, 28, 28, 0.95) 100%);
+      border: 1.5px solid rgba(254, 202, 202, 0.65);
+      color: #ffffff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4), 0 0 10px rgba(239, 68, 68, 0.2);
+      white-space: nowrap;
+    }
+
+    .btn-exit-header:hover {
+      background: linear-gradient(135deg, #f87171 0%, #dc2626 100%);
+      border-color: #ffffff;
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.7);
+      transform: translateY(-1px) scale(1.04);
+    }
+
+    .btn-exit-header:active {
+      transform: scale(0.96);
+    }
+
+    .btn-mobile-action.red-btn {
+      border-color: #ef4444 !important;
+      background: rgba(239, 68, 68, 0.22) !important;
+      color: #fca5a5 !important;
+    }
+    .btn-mobile-action.red-btn:active {
+      background: rgba(239, 68, 68, 0.45) !important;
+      border-color: #f87171 !important;
+    }
+
     /* Live Activity HUD (When Tawaf / Sa'i / Wukuf is active) */
     .live-activity-card {
       position: absolute;
@@ -1139,14 +1181,29 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       background: rgba(245, 197, 66, 0.45);
       box-shadow: 0 0 20px rgba(245, 197, 66, 0.7);
     }
-    .btn-mobile-action.green-btn {
-      border-color: rgba(16, 185, 129, 0.7);
-      background: rgba(6, 78, 59, 0.35);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+    .btn-mobile-action.throw-btn {
+      width: 56px;
+      height: 56px;
+      border-color: #38bdf8;
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.45) 0%, rgba(3, 105, 161, 0.55) 100%);
+      box-shadow: 0 4px 16px rgba(56, 189, 248, 0.35);
     }
-    .btn-mobile-action.green-btn:active, .btn-mobile-action.green-btn.pressed {
-      background: rgba(16, 185, 129, 0.45);
-      box-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+    .btn-mobile-action.throw-btn:active, .btn-mobile-action.throw-btn.pressed {
+      background: rgba(56, 189, 248, 0.45);
+      box-shadow: 0 0 24px rgba(56, 189, 248, 0.8);
+      transform: scale(0.92);
+    }
+    .btn-mobile-action.jump-btn {
+      width: 56px;
+      height: 56px;
+      border-color: var(--color-gold);
+      background: linear-gradient(135deg, rgba(245, 197, 66, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%);
+      box-shadow: 0 4px 16px rgba(245, 197, 66, 0.35);
+    }
+    .btn-mobile-action.jump-btn:active, .btn-mobile-action.jump-btn.pressed {
+      background: rgba(245, 197, 66, 0.5);
+      box-shadow: 0 0 24px rgba(245, 197, 66, 0.8);
+      transform: scale(0.92);
     }
 
     /* ===== WHATSAPP MODAL & PREVIEW ===== */
@@ -1595,7 +1652,10 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         <button class="btn-action-icon" onclick="openLeaderboardModal()" title="Papan Peringkat">🏆</button>
         <button class="btn-action-icon" onclick="openBadgesModal()" title="Lencana">🏅</button>
         <button class="btn-action-icon" id="mute-btn" onclick="toggleMute()" title="Suara">🔊</button>
-        <button class="btn-action-icon" onclick="openExitModal()" title="Keluar Permainan" style="border-color:#f87171; color:#f87171; background:rgba(239,68,68,0.15);">🚪</button>
+        <button class="btn-exit-header clickable" id="btn-exit-game" onclick="openExitModal()" title="Keluar Permainan ke Halaman Utama">
+          <span>🚪</span>
+          <span>Keluar</span>
+        </button>
       </div>
     </div>
 
@@ -1703,27 +1763,15 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       </div>
     </div>
 
-    <!-- Right: Mobile Action Buttons (Jump, Amalan Q, Fiqh E, Cam V, Map) -->
+    <!-- Right: Mobile Action Buttons (Khusus Lompat & Melempar Batu Saja) -->
     <div class="mobile-action-cluster clickable">
-      <button type="button" class="btn-mobile-action" id="btn-mobile-cam" onclick="toggleCameraView()" title="Lihat dari Atas (V)">
-        <span>🦅</span>
-        <span style="font-size:0.55rem; margin-top:-2px;">Atas [V]</span>
+      <button type="button" class="btn-mobile-action throw-btn" id="btn-mobile-throw" onclick="throwPebbleAtJamarat()" title="Melempar Batu Kerikil (Jamarat)">
+        <span>🪨</span>
+        <span style="font-size:0.62rem; margin-top:-2px; font-weight:700;">Lempar</span>
       </button>
-      <button type="button" class="btn-mobile-action" id="btn-mobile-map" onclick="openFullMapModal()" title="Peta Tanah Suci">
-        <span>🗺️</span>
-        <span style="font-size:0.55rem; margin-top:-2px;">Peta</span>
-      </button>
-      <button type="button" class="btn-mobile-action green-btn" id="btn-mobile-fiqh" onclick="openNearbyMutawwif()" title="Konsultasi Fiqh (E)">
-        <span>👳</span>
-        <span style="font-size:0.6rem; margin-top:-2px;">Fiqh [E]</span>
-      </button>
-      <button type="button" class="btn-mobile-action" id="btn-mobile-amalan" onclick="openCurrentLocationActions()" title="Pilihan Amalan (Q)">
-        <span>📋</span>
-        <span style="font-size:0.6rem; margin-top:-2px;">Amalan [Q]</span>
-      </button>
-      <button type="button" class="btn-mobile-action" id="btn-mobile-jump" title="Lompat / Lempar Kerikil (Spasi)">
+      <button type="button" class="btn-mobile-action jump-btn" id="btn-mobile-jump" title="Lompat Karakter (Spasi)">
         <span>🦘</span>
-        <span style="font-size:0.6rem; margin-top:-2px;">Lompat</span>
+        <span style="font-size:0.62rem; margin-top:-2px; font-weight:700;">Lompat</span>
       </button>
     </div>
   </div>
@@ -1733,35 +1781,22 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
   <!-- ======================================================= -->
   <div class="modal-backdrop" id="modal-onboarding">
     <div class="card onboarding-card-bg" style="max-width:580px; text-align:center;">
-      <!-- Step Indicator -->
-      <div class="onboarding-step-indicator">
-        <span class="step-pill active" id="step-pill-1">1. Pilih Ibadah</span>
-        <span style="color:#64748b; font-size:0.75rem;">➔</span>
-        <span class="step-pill" id="step-pill-2">2. Identitas & Karakter</span>
-      </div>
-
       <!-- ================= HALAMAN 1: PILIH UMRAH ATAU HAJI ================= -->
       <div id="onboard-step-1">
-        <!-- Hero Cartoon Banner -->
-        <div class="onboarding-hero-banner">
-          <img src="/assets/images/haji_umrah_cartoon.jpg" alt="Petualangan Haji dan Umrah Kartun" class="onboarding-hero-img">
-          <div style="position:absolute; inset:0; background:linear-gradient(to top, rgba(15,23,42,0.92) 0%, rgba(15,23,42,0.3) 60%, transparent 100%); display:flex; flex-direction:column; justify-content:flex-end; padding:12px 16px; text-align:left;">
-            <div style="font-size:0.75rem; color:var(--color-gold); font-weight:800; letter-spacing:1px; text-transform:uppercase;">
-              🕌 SIMULASI MANASIK TANAH SUCI 3D
-            </div>
-            <h2 style="font-size:1.45rem; font-weight:800; color:#ffffff; line-height:1.2; text-shadow:0 2px 8px rgba(0,0,0,0.8);">
-              IBADAH QUEST
-            </h2>
-          </div>
-        </div>
-
-        <div style="margin-bottom:14px;">
-          <h3 style="font-size:1.22rem; color:var(--color-gold); font-weight:800; margin-bottom:4px;">
-            Pilih Petualangan Ibadah
-          </h3>
-          <p style="font-size:0.84rem; color:#cbd5e1; line-height:1.45;">
+        <div style="margin-top:6px; margin-bottom:18px;">
+          <h2 style="font-size:1.45rem; color:var(--color-gold); font-weight:800; margin-bottom:6px;">
+            🕋 Pilih Petualangan Ibadah
+          </h2>
+          <p style="font-size:0.86rem; color:#cbd5e1; line-height:1.5; max-width:460px; margin:0 auto;">
             Tentukan jenis ibadah yang ingin kamu laksanakan terlebih dahulu. Amalan dan rute pos akan disesuaikan secara otomatis:
           </p>
+        </div>
+
+        <!-- Tombol Cepat Lanjutkan Sesi Terakhir (Jika Sudah Pernah Mulai) -->
+        <div id="onboard-resume-banner" style="display:none; margin-bottom:14px;">
+          <button type="button" class="btn-main clickable" onclick="resumePreviousSession()" style="background:linear-gradient(135deg, rgba(16,185,129,0.25) 0%, rgba(6,78,59,0.6) 100%); border:1.5px solid #34d399; color:#f0fdf4; font-size:0.9rem; font-weight:700; padding:11px 16px; gap:8px; box-shadow:0 0 16px rgba(16,185,129,0.35);">
+            <span>▶️</span> <span id="onboard-resume-txt">Lanjutkan Sesi Terakhir (Santri · Pos 1)</span>
+          </button>
         </div>
 
         <!-- Pilihan Ibadah: Umrah atau Haji -->
@@ -2041,32 +2076,44 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     </div>
   </div>
 
-  <!-- MODAL: KELUAR PERMAINAN -->
+  <!-- MODAL: KELUAR PERMAINAN KE HALAMAN UTAMA -->
   <div class="modal-backdrop" id="modal-exit">
-    <div class="card" style="max-width:480px; text-align:center;">
+    <div class="card" style="max-width:490px; text-align:center;">
       <div class="modal-header-row">
-        <h3 class="modal-title-gold" style="color:#f87171;"><span>🚪</span> <span>Keluar Permainan</span></h3>
+        <h3 class="modal-title-gold" style="color:#f87171;"><span>🚪</span> <span>Keluar ke Halaman Utama</span></h3>
         <button class="btn-close-modal clickable" onclick="closeModal('modal-exit')">✕</button>
       </div>
-      <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:14px;">
-        Apakah santri <b><span id="exit-student-name">Santri</span></b> ingin mengakhiri sesi bermain? Seluruh progres nilai dan lencana telah tersimpan rapi.
+      <p style="font-size:0.92rem; color:#cbd5e1; margin-bottom:14px; line-height:1.5;">
+        Apakah santri <b><span id="exit-student-name">Santri</span></b> ingin mengakhiri sesi dan kembali ke <b>Halaman Utama</b>?
       </p>
 
-      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px; margin-bottom:16px; text-align:left; font-size:0.85rem; color:#94a3b8;">
-        <div>✨ Total Nilai Kuis: <b style="color:var(--color-gold);"><span id="exit-quiz-score">0</span> Poin</b></div>
-        <div>🕌 Total Pahala: <b style="color:#10b981;"><span id="exit-pahala">0</span> Pahala</b></div>
-        <div>📍 Pos Terakhir: <b style="color:#38bdf8;"><span id="exit-pos">POS 1</span></b></div>
+      <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(245,197,66,0.25); border-radius:14px; padding:14px; margin-bottom:16px; text-align:left; font-size:0.86rem; color:#cbd5e1; display:flex; flex-direction:column; gap:6px;">
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#94a3b8;">✨ Total Nilai Kuis:</span>
+          <b style="color:var(--color-gold);"><span id="exit-quiz-score">0</span> Poin</b>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#94a3b8;">🕌 Total Pahala:</span>
+          <b style="color:#10b981;"><span id="exit-pahala">0</span> Pahala</b>
+        </div>
+        <div style="display:flex; justify-content:space-between;">
+          <span style="color:#94a3b8;">📍 Posisi Terakhir:</span>
+          <b style="color:#38bdf8;"><span id="exit-pos">POS 1</span></b>
+        </div>
+        <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.08); font-size:0.75rem; color:#94a3b8;">
+          💾 Seluruh pencapaian dan nilai kamu telah tersimpan aman secara otomatis.
+        </div>
       </div>
 
       <div style="display:flex; flex-direction:column; gap:10px;">
+        <button class="btn-main clickable" onclick="confirmExitGameToHome()" style="background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); color:#ffffff; font-weight:800; box-shadow:0 4px 16px rgba(239,68,68,0.45); font-size:0.96rem; padding:13px 18px;">
+          <span>🏠</span> <span>Ya, Keluar ke Halaman Utama</span>
+        </button>
         <button class="btn-whatsapp clickable" onclick="closeModal('modal-exit'); openWhatsAppModal();">
           <span>📲</span> <span>Kirim Rapor ke WhatsApp Guru Dulu</span>
         </button>
-        <button class="btn-main btn-secondary clickable" onclick="confirmExitGame()" style="border-color:#f87171; color:#fca5a5;">
-          <span>🚪</span> <span>Keluar & Ganti Akun Santri</span>
-        </button>
         <button class="btn-main btn-secondary clickable" onclick="closeModal('modal-exit')">
-          <span>❌</span> <span>Lanjut Bermain (Batal)</span>
+          <span>❌</span> <span>Batal & Lanjut Bermain</span>
         </button>
       </div>
     </div>
@@ -3299,6 +3346,24 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       stepChant();
     }
 
+    function stopTalbiyahChantLoop() {
+      talbiyahEngine.isPlaying = false;
+      if (talbiyahEngine.activeTimer) {
+        clearTimeout(talbiyahEngine.activeTimer);
+        talbiyahEngine.activeTimer = null;
+      }
+      if (talbiyahEngine.masterGain && audioCtx) {
+        try {
+          talbiyahEngine.masterGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        } catch (e) {}
+      }
+      const indicator = document.getElementById("talbiyah-indicator");
+      if (indicator) {
+        indicator.classList.remove("active");
+        indicator.textContent = `🔇 Talbiyah`;
+      }
+    }
+
     function updateTalbiyahProximity() {
       if (!talbiyahEngine.masterGain || !audioCtx) return;
 
@@ -4478,6 +4543,20 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       tawafRing.position.set(0, 0.29, 0);
       scene.add(tawafRing);
 
+      // 8 Counter-Clockwise Direction Chevrons (Ka'bah selalu di sisi kiri jemaah)
+      const tawafArrowMat = new THREE.MeshBasicMaterial({ color: 0x10b981, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+      for (let i = 0; i < 8; i++) {
+        const theta = (i / 8) * Math.PI * 2;
+        const R = 9.6;
+        const cx = R * Math.cos(theta);
+        const cz = R * Math.sin(theta);
+        const arrMesh = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.3, 3), tawafArrowMat);
+        arrMesh.rotation.x = -Math.PI / 2;
+        arrMesh.rotation.z = -theta + Math.PI;
+        arrMesh.position.set(cx, 0.31, cz);
+        scene.add(arrMesh);
+      }
+
       // Ka'bah
       const kabahGroup = new THREE.Group();
       const kabahBody = new THREE.Mesh(
@@ -4986,10 +5065,11 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         if (promptMutawwif) promptMutawwif.classList.remove("visible");
         actHud.classList.add("visible");
 
-        // TAWAF COUNTER-CLOCKWISE TRACKING
+        // TAWAF COUNTER-CLOCKWISE TRACKING (Berlawanan arah jarum jam, Ka'bah selalu di sisi kiri)
         if (state.liveActivity.type === "tawaf") {
           const distToCenter = Math.hypot(playerPhysics.x, playerPhysics.z);
-          if (distToCenter >= 6.0 && distToCenter <= 26) {
+          const guideEl = document.getElementById("live-act-guide");
+          if (distToCenter >= 5.5 && distToCenter <= 26) {
             const currentAngle = Math.atan2(playerPhysics.z, playerPhysics.x);
 
             if (state.liveActivity.lastTawafAngle !== null) {
@@ -4997,20 +5077,28 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
               if (dAngle > Math.PI) dAngle -= Math.PI * 2;
               if (dAngle < -Math.PI) dAngle += Math.PI * 2;
 
-              state.liveActivity.tawafAccumAngle += dAngle;
+              // Perputaran SAH adalah berlawanan arah jarum jam (dAngle < 0, Ka'bah selalu di sisi kiri)
+              if (dAngle < -0.0008) {
+                state.liveActivity.tawafAccumAngle += Math.abs(dAngle);
+                if (guideEl) guideEl.textContent = "✅ Arah Benar! Berlawanan jarum jam (Ka'bah di sisi kiri Anda). Lanjutkan putaran!";
+              } else if (dAngle > 0.004) {
+                if (guideEl) guideEl.textContent = "⚠️ Arah terbalik! Putarlah berlawanan arah jarum jam (Ka'bah harus selalu di sisi kiri).";
+              }
 
-              if (Math.abs(state.liveActivity.tawafAccumAngle) >= (Math.PI * 2 * 0.92)) {
+              if (state.liveActivity.tawafAccumAngle >= (Math.PI * 2 * 0.90)) {
                 state.liveActivity.tawafAccumAngle = 0;
                 state.liveActivity.count++;
                 soundTawafLap();
                 showFloatingScore(`Putaran ${state.liveActivity.count}/7 Selesai!`);
-                toast(`🕋 Bismillahi Allahu Akbar! Putaran Tawaf ke-${state.liveActivity.count} selesai.`);
+                toast(`🕋 Bismillahi Allahu Akbar! Putaran Tawaf ke-${state.liveActivity.count} selesai mabrur.`);
                 updateActivityHUD();
 
                 if (state.liveActivity.count >= 7) completeLiveActivity();
               }
             }
             state.liveActivity.lastTawafAngle = currentAngle;
+          } else {
+            if (guideEl) guideEl.textContent = "⚠️ Dekati pelataran Ka'bah untuk melanjutkan Tawaf (Ka'bah selalu di sisi kiri).";
           }
         }
 
@@ -6199,9 +6287,10 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       }
     }
 
-    /* ===== MODAL KELUAR PERMAINAN ===== */
+    /* ===== MODAL KELUAR PERMAINAN KE HALAMAN UTAMA ===== */
     function openExitModal() {
-      document.getElementById("exit-student-name").textContent = state.nama || state.username;
+      playBeep(440, 60);
+      document.getElementById("exit-student-name").textContent = state.nama || state.username || "Santri";
       document.getElementById("exit-quiz-score").textContent = (state.totalQuizScore || 0).toString();
       document.getElementById("exit-pahala").textContent = (state.pahala || 0).toLocaleString("id-ID");
       const posData = getCurrentPosData();
@@ -6209,11 +6298,51 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       openModal("modal-exit");
     }
 
-    function confirmExitGame() {
+    function confirmExitGameToHome() {
+      playBeep(380, 90);
       saveLocalProgress();
-      closeModal("modal-exit");
-      toast("👋 Progres kamu telah tersimpan. Silakan perbarui nama santri atau karakter.");
-      openProfileModal();
+
+      // Close all potentially open modals
+      const allModalIds = [
+        "modal-exit", "modal-actions-deck", "modal-quiz", "modal-result",
+        "modal-quiz-summary", "modal-whatsapp", "modal-mode", "modal-profile",
+        "modal-leaderboard", "modal-badges", "modal-mutawwif", "modal-pos-next-guide",
+        "modal-full-map", "modal-miqat-guide", "modal-muzdalifah-pebbles"
+      ];
+      allModalIds.forEach(id => closeModal(id));
+
+      // Stop any active live 3D activity (Tawaf, Sa'i, Jamarat, Wukuf)
+      if (state.liveActivity) {
+        state.liveActivity.active = false;
+        const liveHud = document.getElementById("live-activity-hud");
+        if (liveHud) liveHud.classList.remove("visible");
+      }
+
+      // Stop talbiyah background audio chant
+      stopTalbiyahChantLoop();
+
+      state.isGameStarted = false;
+
+      // Reopen the full onboarding / home modal to Step 1
+      openOnboardingModal();
+      goToOnboardingStep(1);
+
+      toast("🏠 Telah keluar ke Halaman Utama. Progres ibadah Anda tersimpan aman.");
+    }
+
+    function confirmExitGame() {
+      confirmExitGameToHome();
+    }
+
+    function resumePreviousSession() {
+      playBeep(520, 80);
+      closeModal("modal-onboarding");
+      state.isGameStarted = true;
+      initTalbiyahAudioEngine();
+      updateTalbiyahProximity();
+      updateHUD();
+      soundFinish();
+      toast(`🕌 Melanjutkan ibadah ${state.mode}: ${state.nama}`);
     }
 
     /* ===== MODAL KIRIM HASIL NILAI KE WHATSAPP GURU ===== */
@@ -6332,9 +6461,6 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
           hapticFeedback(28);
           keys.space = true;
           jumpBtn.classList.add("pressed");
-          if (state.liveActivity.active && state.liveActivity.type === "jamarat") {
-            throwPebbleAtJamarat();
-          }
         };
         const jumpRelease = (e) => {
           e.preventDefault();
@@ -6348,13 +6474,25 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
         jumpBtn.addEventListener("mouseup", jumpRelease);
       }
 
-      // Action buttons tactile haptic listeners
-      ["btn-mobile-cam", "btn-mobile-map", "btn-mobile-fiqh", "btn-mobile-amalan"].forEach(id => {
-        const b = document.getElementById(id);
-        if (b) {
-          b.addEventListener("touchstart", () => hapticFeedback(20), { passive: true });
-        }
-      });
+      // Dedicated Throw Pebble Button (Tombol Melempar Batu)
+      const throwBtn = document.getElementById("btn-mobile-throw");
+      if (throwBtn) {
+        const throwPress = (e) => {
+          e.preventDefault();
+          hapticFeedback(30);
+          throwBtn.classList.add("pressed");
+          throwPebbleAtJamarat();
+        };
+        const throwRelease = (e) => {
+          e.preventDefault();
+          throwBtn.classList.remove("pressed");
+        };
+        throwBtn.addEventListener("touchstart", throwPress, { passive: false });
+        throwBtn.addEventListener("touchend", throwRelease, { passive: false });
+        throwBtn.addEventListener("touchcancel", throwRelease, { passive: false });
+        throwBtn.addEventListener("mousedown", throwPress);
+        throwBtn.addEventListener("mouseup", throwRelease);
+      }
 
       // Input mode toggle (D-Pad vs Virtual Joystick)
       if (toggleBtn) {
@@ -6393,9 +6531,16 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       const guideEl = document.getElementById("live-act-guide");
 
       if (type === "tawaf") {
-        titleEl.textContent = "TAWAF KA'BAH";
-        guideEl.textContent = "Kelilingi Ka'bah 7 putaran (Ka'bah di sisi kiri). Mulai & akhiri di Hajar Aswad!";
+        titleEl.textContent = "TAWAF KA'BAH (7 PUTARAN)";
+        guideEl.textContent = "Berjalanlah mengelilingi Ka'bah 7 putaran berlawanan arah jarum jam (Ka'bah selalu di sisi kiri jemaah). Mulai dari Hajar Aswad!";
         teleportTo("HAJAR_ASWAD");
+        playerPhysics.x = 9.2;
+        playerPhysics.z = 9.2;
+        playerPhysics.y = 0.5;
+        playerPhysics.rotationY = Math.PI * 0.95; // Menghadap ke arah putaran (Utara/-Z), Ka'bah tepat di sisi kiri
+        cameraController.yaw = Math.PI * 0.9;
+        cameraController.pitch = 0.32;
+        cameraController.distance = 9;
       } else if (type === "sai") {
         titleEl.textContent = "SA'I SHAFA ↔ MARWAH";
         guideEl.textContent = "7 lintasan Shafa-Marwah. Lari kecil di pilar hijau bagi pria!";
@@ -7093,6 +7238,21 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       }
       setOnboardingGender(state.gender || "L");
       setOnboardingMode(state.mode || "UMRAH");
+
+      // Check if session has previous active progress to offer quick resume
+      const resumeBanner = document.getElementById("onboard-resume-banner");
+      const resumeTxt = document.getElementById("onboard-resume-txt");
+      if (resumeBanner && resumeTxt) {
+        if (state.nama && state.nama !== "Santri Petualang") {
+          const currentPosObj = getCurrentPosData();
+          const posTitle = currentPosObj ? currentPosObj.title : `Pos ${state.pos}`;
+          resumeTxt.textContent = `Lanjutkan Sesi Terakhir (${state.nama} · ${state.mode} · ${posTitle})`;
+          resumeBanner.style.display = "block";
+        } else {
+          resumeBanner.style.display = "none";
+        }
+      }
+
       goToOnboardingStep(1);
       openModal("modal-onboarding");
     }
