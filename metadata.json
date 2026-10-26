@@ -1,0 +1,6 @@
+{
+  "name": "IBADAH QUEST - Petualangan Haji & Umrah",
+  "description": "Game edukasi interaktif 3D petualangan manasik Haji dan Umrah di Tanah Suci dengan karakter santri Roblox, simulasi rukun, kuis fiqh, dan panduan mutawwif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
