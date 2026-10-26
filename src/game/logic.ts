@@ -183,3 +183,56 @@ export function calculateMiqatProgress(steps: MiqatStepsState): MiqatProgressRes
   };
 }
 
+/**
+ * Fisher-Yates array shuffle helper to randomize questions and choices.
+ */
+export function shuffleArray<T>(array: T[]): T[] {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export interface ChoiceOption {
+  key?: string;
+  text: string;
+  correct: boolean;
+}
+
+/**
+ * Shuffles choices and re-assigns A, B, C, D to prevent student cheating.
+ */
+export function shuffleChoices(choices: ChoiceOption[]): ChoiceOption[] {
+  const letters = ['A', 'B', 'C', 'D'];
+  const shuffled = shuffleArray(choices);
+  return shuffled.map((ch, idx) => ({
+    ...ch,
+    key: letters[idx] || `${idx + 1}`,
+  }));
+}
+
+/**
+ * Strictly maps pos index and landmark key to the correct ritual activity,
+ * preventing any mix-up (e.g. Tawaf turning into Jamarat).
+ */
+export function resolvePosActivity(posNum: number, mode: 'UMRAH' | 'HAJI'): string | null {
+  if (mode === 'UMRAH') {
+    if (posNum === 2) return 'tawaf';
+    if (posNum === 3) return 'sai';
+    return null;
+  }
+  // HAJI TAMATTU'
+  if (posNum === 2) return 'tawaf';
+  if (posNum === 3) return 'sai';
+  if (posNum === 6) return 'wukuf';
+  if (posNum === 8) return 'jamarat';
+  if (posNum === 10) return 'tawaf';
+  if (posNum === 11) return 'sai';
+  if (posNum === 12) return 'jamarat';
+  if (posNum === 13) return 'tawaf';
+  return null;
+}
+
+

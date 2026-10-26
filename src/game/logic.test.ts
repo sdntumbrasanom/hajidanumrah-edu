@@ -5,6 +5,8 @@ import {
   calculateCompassNav,
   checkCheckpointCollision,
   calculateMiqatProgress,
+  shuffleChoices,
+  resolvePosActivity,
 } from './logic';
 
 test('Camera relative movement: pressing D (Right) moves screen-right', () => {
@@ -91,4 +93,35 @@ test('calculateMiqatProgress: tracks full completion (4 of 4 = 100%)', () => {
   assert.equal(res.percentage, 100);
   assert.equal(res.isComplete, true);
 });
+
+test('shuffleChoices preserves correct answer count and reassigns keys A-D', () => {
+  const choices = [
+    { text: 'A text', correct: true },
+    { text: 'B text', correct: false },
+    { text: 'C text', correct: false },
+    { text: 'D text', correct: false },
+  ];
+  const shuffled = shuffleChoices(choices);
+  assert.equal(shuffled.length, 4);
+  assert.equal(shuffled.filter(c => c.correct).length, 1);
+  assert.deepEqual(shuffled.map(c => c.key), ['A', 'B', 'C', 'D']);
+});
+
+test('resolvePosActivity strictly routes Tawaf at Pos 2/10/13 and Jamarat at Pos 8/12', () => {
+  // Pos 2 is always Tawaf in both modes
+  assert.equal(resolvePosActivity(2, 'UMRAH'), 'tawaf');
+  assert.equal(resolvePosActivity(2, 'HAJI'), 'tawaf');
+  // Pos 3 is Sa'i
+  assert.equal(resolvePosActivity(3, 'UMRAH'), 'sai');
+  assert.equal(resolvePosActivity(3, 'HAJI'), 'sai');
+  // Pos 8 is Jamarat
+  assert.equal(resolvePosActivity(8, 'HAJI'), 'jamarat');
+  // Pos 10 is Tawaf Ifadah
+  assert.equal(resolvePosActivity(10, 'HAJI'), 'tawaf');
+  // Pos 12 is Jamarat hari tasyrik
+  assert.equal(resolvePosActivity(12, 'HAJI'), 'jamarat');
+  // Pos 13 is Tawaf Wada
+  assert.equal(resolvePosActivity(13, 'HAJI'), 'tawaf');
+});
+
 
