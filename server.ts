@@ -226,6 +226,19 @@ wss.on('connection', (ws) => {
         }, ws);
       }
 
+      else if (msg.type === 'chat') {
+        const id = socketToPlayerId.get(ws) || msg.id;
+        broadcast({
+          type: 'chat',
+          id,
+          name: msg.name || 'Santri',
+          text: msg.text || '',
+          x: msg.x,
+          y: msg.y,
+          z: msg.z
+        }, ws);
+      }
+
       else if (msg.type === 'ping') {
         const id = socketToPlayerId.get(ws);
         if (id && connectedPlayers.has(id)) {
