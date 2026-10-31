@@ -77,8 +77,8 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
 
       <!-- Top Actions -->
       <div class="top-action-cluster clickable">
-        <div class="online-pill" id="hud-online-pill" title="Jumlah Siswa yang Sedang Online">
-          <span class="online-dot"></span> <span id="online-count-val">1</span> Siswa Online
+        <div class="online-pill clickable" id="hud-online-pill" onclick="openMabarModal()" title="Klik untuk Buka Menu Mabar Santri">
+          <span class="online-dot"></span> 👥 <span id="online-count-val">1</span> Santri Mabar
         </div>
         <button class="btn-action-icon" id="btn-top-cam" onclick="toggleCameraView()" title="Lihat dari Atas / Drone View (Tekan V)">🦅</button>
         <button class="btn-action-icon" id="btn-top-map" onclick="openFullMapModal()" title="Peta Lengkap Tanah Suci">🗺️</button>
@@ -234,33 +234,68 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
           </div>
         </div>
 
-        <!-- Pilihan Ibadah: Umrah atau Haji -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:20px; text-align:left;">
-          <div id="onboard-mode-umrah" class="onboarding-mode-btn selected" onclick="setOnboardingMode('UMRAH')">
+        <!-- Pilihan Ibadah: Umrah, Haji Tamatuk, Haji Qiran, Haji Ifrad -->
+        <div style="font-size:0.88rem; font-weight:700; color:var(--color-gold); margin-bottom:10px; text-align:left; display:flex; align-items:center; gap:6px;">
+          <span>🕋</span> <span>Pilih Rangkaian Ibadah:</span>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; text-align:left;">
+          <!-- 1. UMRAH -->
+          <div id="onboard-mode-umrah" class="onboarding-mode-btn selected clickable" onclick="setOnboardingMode('UMRAH')">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-              <span style="font-size:2.4rem;">🕋</span>
-              <span style="font-size:0.68rem; background:rgba(245,197,66,0.2); color:var(--color-gold); padding:2px 8px; border-radius:999px; font-weight:700;">4 Pos Rukun</span>
+              <span style="font-size:2rem;">🕋</span>
+              <span style="font-size:0.65rem; background:rgba(245,197,66,0.2); color:var(--color-gold); padding:2px 8px; border-radius:999px; font-weight:700;">4 Pos Rukun</span>
             </div>
-            <span style="font-size:1.1rem; font-weight:800; color:#fff; margin-top:4px;">Ibadah Umrah</span>
-            <span style="font-size:0.72rem; color:#cbd5e1; line-height:1.35;">
-              Miqat ➔ Tawaf ➔ Sa'i Shafa-Marwah ➔ Tahallul
+            <span style="font-size:1rem; font-weight:800; color:#fff; margin-top:3px;">Ibadah Umrah</span>
+            <span style="font-size:0.7rem; color:#cbd5e1; line-height:1.35;">
+              Miqat ➔ Tawaf (7 Putaran) ➔ Sa'i (7 Lintasan) ➔ Tahallul (Potong Rambut)
             </span>
-            <div style="font-size:0.66rem; color:#10b981; font-weight:700; margin-top:4px;">
+            <div style="font-size:0.65rem; color:#10b981; font-weight:700; margin-top:3px;">
               ⏱️ Estimasi: ~10-15 Menit
             </div>
           </div>
 
-          <div id="onboard-mode-haji" class="onboarding-mode-btn" onclick="setOnboardingMode('HAJI')">
+          <!-- 2. HAJI TAMATTU' -->
+          <div id="onboard-mode-haji" class="onboarding-mode-btn clickable" onclick="setOnboardingMode('HAJI_TAMATTU')">
             <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-              <span style="font-size:2.4rem;">🏔️</span>
-              <span style="font-size:0.68rem; background:rgba(56,189,248,0.2); color:var(--color-cyan); padding:2px 8px; border-radius:999px; font-weight:700;">13 Pos Lengkap</span>
+              <span style="font-size:2rem;">🏔️</span>
+              <span style="font-size:0.65rem; background:rgba(56,189,248,0.2); color:var(--color-cyan); padding:2px 8px; border-radius:999px; font-weight:700;">13 Pos Lengkap</span>
             </div>
-            <span style="font-size:1.1rem; font-weight:800; color:#fff; margin-top:4px;">Haji Tamattu'</span>
-            <span style="font-size:0.72rem; color:#cbd5e1; line-height:1.35;">
-              Miqat ➔ Tawaf ➔ Mina ➔ Wukuf Arafah ➔ Muzdalifah ➔ Lempar Jamarat
+            <span style="font-size:1rem; font-weight:800; color:#fff; margin-top:3px;">Haji Tamatuk</span>
+            <span style="font-size:0.7rem; color:#cbd5e1; line-height:1.35;">
+              Umrah dahulu sampai Tahallul, lalu Ihram Haji 8 Dzulhijjah, Arafah, Muzdalifah, Mina, Tawaf Ifadhah. Wajib Dam.
             </span>
-            <div style="font-size:0.66rem; color:#38bdf8; font-weight:700; margin-top:4px;">
-              ⏱️ Estimasi: ~25-35 Menit
+            <div style="font-size:0.65rem; color:#38bdf8; font-weight:700; margin-top:3px;">
+              ⭐ Paling Populer (Jemaah RI)
+            </div>
+          </div>
+
+          <!-- 3. HAJI QIRAN -->
+          <div id="onboard-mode-qiran" class="onboarding-mode-btn clickable" onclick="setOnboardingMode('HAJI_QIRAN')">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <span style="font-size:2rem;">🔗</span>
+              <span style="font-size:0.65rem; background:rgba(168,85,247,0.2); color:#c084fc; padding:2px 8px; border-radius:999px; font-weight:700;">11 Pos</span>
+            </div>
+            <span style="font-size:1rem; font-weight:800; color:#fff; margin-top:3px;">Haji Qiran</span>
+            <span style="font-size:0.7rem; color:#cbd5e1; line-height:1.35;">
+              Niat Umrah & Haji digabung sekaligus sejak Miqat tanpa bertahallul sampai 10 Dzulhijjah di Mina. Wajib Dam.
+            </span>
+            <div style="font-size:0.65rem; color:#c084fc; font-weight:700; margin-top:3px;">
+              🔄 Dua Ibadah Sekaligus
+            </div>
+          </div>
+
+          <!-- 4. HAJI IFRAD -->
+          <div id="onboard-mode-ifrad" class="onboarding-mode-btn clickable" onclick="setOnboardingMode('HAJI_IFRAD')">
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+              <span style="font-size:2rem;">👑</span>
+              <span style="font-size:0.65rem; background:rgba(34,197,94,0.2); color:#4ade80; padding:2px 8px; border-radius:999px; font-weight:700;">12 Pos</span>
+            </div>
+            <span style="font-size:1rem; font-weight:800; color:#fff; margin-top:3px;">Haji Ifrad</span>
+            <span style="font-size:0.7rem; color:#cbd5e1; line-height:1.35;">
+              Niat Haji saja sejak Miqat hingga seluruh rukun haji tuntas, baru melaksanakan Umrah sunnah. Tidak wajib Dam.
+            </span>
+            <div style="font-size:0.65rem; color:#4ade80; font-weight:700; margin-top:3px;">
+              ✨ Haji Mandiri (Bebas Dam)
             </div>
           </div>
         </div>
@@ -598,21 +633,46 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
 
   <!-- MODAL: PILIH MODE (HAJI / UMRAH) -->
   <div class="modal-backdrop" id="modal-mode">
-    <div class="card" style="text-align:center;">
+    <div class="card" style="text-align:center; max-width:620px;">
       <div class="modal-header-row">
-        <h3 class="modal-title-gold"><span>🕋</span> <span>Pilih Petualangan Ibadah</span></h3>
+        <h3 class="modal-title-gold"><span>🕋</span> <span>Pilih Rangkaian Ibadah</span></h3>
         <button class="btn-close-modal clickable" onclick="closeModal('modal-mode')">✕</button>
       </div>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0;">
-        <button class="btn-main btn-secondary clickable" onclick="switchMode('UMRAH')" style="flex-direction:column; padding:22px 12px; border-color:var(--color-gold); background:rgba(245,197,66,0.08);">
-          <span style="font-size:2.4rem;">🕋</span>
-          <span style="font-size:1.1rem; color:#fff; font-weight:700;">Umrah</span>
-          <span style="font-size:0.75rem; color:var(--color-gold);">4 Pos Ibadah Utama</span>
+      <p style="font-size:0.86rem; color:#cbd5e1; margin-bottom:14px; text-align:left;">
+        Silakan pilih jenis ibadah yang ingin kamu simulasikan:
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:14px 0; text-align:left;">
+        <button class="btn-main btn-secondary clickable" onclick="switchMode('UMRAH')" style="flex-direction:column; padding:16px 12px; border-color:var(--color-gold); background:rgba(245,197,66,0.08);">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <span style="font-size:2rem;">🕋</span>
+            <span style="font-size:0.65rem; color:var(--color-gold); font-weight:700;">4 Pos</span>
+          </div>
+          <span style="font-size:1.05rem; color:#fff; font-weight:800; margin-top:2px;">Ibadah Umrah</span>
+          <span style="font-size:0.7rem; color:#cbd5e1;">Miqat ➔ Tawaf ➔ Sa'i ➔ Tahallul</span>
         </button>
-        <button class="btn-main btn-secondary clickable" onclick="switchMode('HAJI')" style="flex-direction:column; padding:22px 12px; border-color:var(--color-gold-dark); background:rgba(217,119,6,0.08);">
-          <span style="font-size:2.4rem;">🏔️</span>
-          <span style="font-size:1.1rem; color:#fff; font-weight:700;">Haji Tamattu'</span>
-          <span style="font-size:0.75rem; color:var(--color-gold);">13 Pos Ibadah Lengkap</span>
+        <button class="btn-main btn-secondary clickable" onclick="switchMode('HAJI_TAMATTU')" style="flex-direction:column; padding:16px 12px; border-color:var(--color-cyan); background:rgba(56,189,248,0.08);">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <span style="font-size:2rem;">🏔️</span>
+            <span style="font-size:0.65rem; color:var(--color-cyan); font-weight:700;">13 Pos</span>
+          </div>
+          <span style="font-size:1.05rem; color:#fff; font-weight:800; margin-top:2px;">Haji Tamatuk</span>
+          <span style="font-size:0.7rem; color:#cbd5e1;">Umrah dahulu, lalu Haji 8 Dzulhijjah</span>
+        </button>
+        <button class="btn-main btn-secondary clickable" onclick="switchMode('HAJI_QIRAN')" style="flex-direction:column; padding:16px 12px; border-color:#c084fc; background:rgba(168,85,247,0.08);">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <span style="font-size:2rem;">🔗</span>
+            <span style="font-size:0.65rem; color:#c084fc; font-weight:700;">11 Pos</span>
+          </div>
+          <span style="font-size:1.05rem; color:#fff; font-weight:800; margin-top:2px;">Haji Qiran</span>
+          <span style="font-size:0.7rem; color:#cbd5e1;">Ihram Umrah & Haji sekaligus</span>
+        </button>
+        <button class="btn-main btn-secondary clickable" onclick="switchMode('HAJI_IFRAD')" style="flex-direction:column; padding:16px 12px; border-color:#4ade80; background:rgba(34,197,94,0.08);">
+          <div style="display:flex; justify-content:space-between; width:100%;">
+            <span style="font-size:2rem;">👑</span>
+            <span style="font-size:0.65rem; color:#4ade80; font-weight:700;">12 Pos</span>
+          </div>
+          <span style="font-size:1.05rem; color:#fff; font-weight:800; margin-top:2px;">Haji Ifrad</span>
+          <span style="font-size:0.7rem; color:#cbd5e1;">Haji dahulu, lalu Umrah sunnah</span>
         </button>
       </div>
       <button class="btn-main btn-secondary clickable" onclick="closeModal('modal-mode')">Tutup</button>
@@ -859,6 +919,59 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         </button>
         <button type="button" class="btn-main btn-gold clickable" onclick="submitGuruLogin()" style="flex:2;">
           <span>Masuk Portal Guru ➔</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================= -->
+  <!-- MODAL: MABAR MULTIPLAYER (MAIN BARENG SANTRI REALTIME)  -->
+  <!-- ======================================================= -->
+  <div class="modal-backdrop" id="modal-mabar">
+    <div class="card" style="max-width:560px; text-align:left;">
+      <div class="modal-header-row">
+        <h3 class="modal-title-gold" style="font-size:1.3rem;">
+          <span>👥</span> <span>Main Bareng (Mabar) Santri</span>
+        </h3>
+        <button class="btn-close-modal clickable" onclick="closeModal('modal-mabar')">✕</button>
+      </div>
+      <p style="font-size:0.86rem; color:#cbd5e1; margin-bottom:12px; line-height:1.45;">
+        Kamu dan teman-teman sekelas terhubung langsung di dunia 3D yang sama secara realtime! Lihat posisi temanmu, beribadah bersama, atau teleport langsung ke lokasinya.
+      </p>
+
+      <!-- Quick Emotes / Salam Row -->
+      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(245,197,66,0.25); border-radius:12px; padding:12px; margin-bottom:14px;">
+        <div style="font-size:0.75rem; color:var(--color-gold); font-weight:700; margin-bottom:8px;">
+          📢 Kirim Salam / Emote ke Seluruh Santri di Dunia:
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+          <button type="button" class="btn-main clickable" onclick="sendMultiplayerEmote('Assalamu\'alaikum! 🤲')" style="width:auto; padding:6px 12px; font-size:0.8rem; background:rgba(30,41,59,0.9); border:1px solid #38bdf8; color:#38bdf8;">
+            🤲 Assalamu'alaikum
+          </button>
+          <button type="button" class="btn-main clickable" onclick="sendMultiplayerEmote('Labbaikallahumma Labbaik! 🕋')" style="width:auto; padding:6px 12px; font-size:0.8rem; background:rgba(30,41,59,0.9); border:1px solid var(--color-gold); color:var(--color-gold);">
+            🕋 Talbiyah
+          </button>
+          <button type="button" class="btn-main clickable" onclick="sendMultiplayerEmote('Ayo kita Tawaf bareng! 🏃')" style="width:auto; padding:6px 12px; font-size:0.8rem; background:rgba(30,41,59,0.9); border:1px solid #10b981; color:#10b981;">
+            🏃 Ajak Tawaf
+          </button>
+          <button type="button" class="btn-main clickable" onclick="sendMultiplayerEmote('Allahu Akbar! 📢')" style="width:auto; padding:6px 12px; font-size:0.8rem; background:rgba(30,41,59,0.9); border:1px solid #f87171; color:#f87171;">
+            📢 Takbir
+          </button>
+        </div>
+      </div>
+
+      <!-- Classmates Online List -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+        <span style="font-size:0.82rem; font-weight:700; color:#fff;">Daftar Teman Online:</span>
+        <span style="font-size:0.78rem; color:#10b981; font-weight:700;" id="mabar-modal-count-txt">1 Santri Online</span>
+      </div>
+      <div id="mabar-players-list" style="max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+        <!-- Filled dynamically -->
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-main btn-secondary clickable" onclick="closeModal('modal-mabar')" style="width:100%;">
+          Tutup & Kembali Mabar
         </button>
       </div>
     </div>
@@ -1303,6 +1416,68 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         }
       ]
     };
+
+    // Mode Aliases & Supporting All 4 Worship Modes
+    ORDER.HAJI_TAMATTU = ORDER.HAJI;
+    ORDER.HAJI_QIRAN = [
+      { id:"qiran_ihram", pos:1, title:"POS 1 — Miqat (Niat Umrah & Haji Sekaligus)", emoji:"🏜️",
+        landmarkKey: "MIQAT",
+        desc:"Haji Qiran: Menggabungkan niat haji dan umrah dalam satu amalan ihram sejak Miqat.",
+        choices:[
+          {key:"A", text:"Niat: Labbaika Hajjan wa 'Umratan (Ihram sekaligus)", correct:true},
+          {key:"B", text:"Niat umrah saja tanpa haji", correct:false},
+          {key:"C", text:"Langsung jalan tanpa niat", correct:false}
+        ],
+        edu:"Haji Qiran menggabungkan niat Umrah dan Haji sekaligus dari miqat dan tidak boleh bertahallul sampai tanggal 10 Dzulhijjah.",
+        badge:"Qiran Pioneer"
+      },
+      { id:"qiran_tawaf_qudum", pos:2, title:"POS 2 — Tawaf Qudum", emoji:"🕋",
+        landmarkKey: "HAJAR_ASWAD", activityType: "tawaf",
+        desc:"Tiba di Ka'bah, laksanakan Tawaf Qudum 7 putaran (Ka'bah di sisi kiri).",
+        counter:{type:"loop", target:7, label:"Putaran Tawaf"}
+      },
+      { id:"qiran_sai", pos:3, title:"POS 3 — Sa'i Shafa-Marwah", emoji:"⛰️",
+        landmarkKey: "SHAFA", activityType: "sai",
+        desc:"Laksanakan Sa'i 7 lintasan Shafa-Marwah (sebagai Sa'i haji dan umrah). Setelah Sa'i, TIDAK BERTAHALLUL.",
+        counter:{type:"leg", target:7, label:"Perjalanan Sa'i"}
+      },
+      { id:"qiran_mina_tarwiyah", pos:4, title:"POS 4 — Tarwiyah di Mina", emoji:"⛺", landmarkKey: "MINA", desc:"Mabit di Mina pada tanggal 8 Dzulhijjah dengan tetap dalam busana ihram." },
+      { id:"qiran_wukuf", pos:5, title:"POS 5 — Wukuf di Padang Arafah", emoji:"🏔️", landmarkKey: "ARAFAH", activityType: "wukuf", desc:"Wukuf di Arafah pada 9 Dzulhijjah dari Dzuhur sampai terbenam matahari." },
+      { id:"qiran_muzdalifah", pos:6, title:"POS 6 — Mabit di Muzdalifah", emoji:"🌙", landmarkKey: "MUZDALIFAH", desc:"Mabit di Muzdalifah dan memungut batu kerikil." },
+      { id:"qiran_jamarat_aqabah", pos:7, title:"POS 7 — Lempar Jumrah Aqabah", emoji:"🪨", landmarkKey: "JAMARAT", activityType: "jamarat", desc:"Melontar 7 butir kerikil ke Jumrah Aqabah pada 10 Dzulhijjah." },
+      { id:"qiran_tahallul", pos:8, title:"POS 8 — Tahallul & Sembelih Dam", emoji:"✂️", landmarkKey: "MARWAH", desc:"Mencukur rambut (tahallul) dan menyembelih seekor kambing sebagai dam Qiran." },
+      { id:"qiran_tawaf_ifadhah", pos:9, title:"POS 9 — Tawaf Ifadhah", emoji:"🕋", landmarkKey: "HAJAR_ASWAD", activityType: "tawaf", desc:"Tawaf Ifadhah 7 putaran mengelilingi Ka'bah." },
+      { id:"qiran_tasyrik", pos:10, title:"POS 10 — Mabit Mina & Lempar 3 Jumrah", emoji:"⛺", landmarkKey: "JAMARAT", activityType: "jamarat", desc:"Bermalam di Mina dan melempar ketiga jumrah (Ula, Wustha, Aqabah) pada hari tasyrik." },
+      { id:"qiran_wada", pos:11, title:"POS 11 — Tawaf Wada'", emoji:"🚪", landmarkKey: "HAJAR_ASWAD", activityType: "tawaf", desc:"Tawaf perpisahan 7 putaran sebelum meninggalkan Makkah al-Mukarramah.", finish:true }
+    ];
+    ORDER.HAJI_IFRAD = [
+      { id:"ifrad_ihram", pos:1, title:"POS 1 — Miqat (Niat Haji Saja)", emoji:"🏜️",
+        landmarkKey: "MIQAT",
+        desc:"Haji Ifrad: Berniat murni untuk melaksanakan ibadah haji saja terlebih dahulu.",
+        choices:[
+          {key:"A", text:"Niat: Labbaika Hajjan (Haji saja)", correct:true},
+          {key:"B", text:"Niat umrah saja", correct:false},
+          {key:"C", text:"Niat rekreasi", correct:false}
+        ],
+        edu:"Haji Ifrad: mendahulukan pelaksanaan haji secara mandiri, tidak dikenakan denda dam.",
+        badge:"Ifrad Pioneer"
+      },
+      { id:"ifrad_tawaf_qudum", pos:2, title:"POS 2 — Tawaf Qudum", emoji:"🕋", landmarkKey: "HAJAR_ASWAD", activityType: "tawaf", desc:"Tawaf selamat datang 7 putaran mengelilingi Ka'bah." },
+      { id:"ifrad_sai", pos:3, title:"POS 3 — Sa'i Haji (Mendahulukan Sa'i)", emoji:"⛰️", landmarkKey: "SHAFA", activityType: "sai", desc:"Sa'i 7 lintasan Shafa-Marwah. Tetap berihram tanpa tahallul." },
+      { id:"ifrad_tarwiyah", pos:4, title:"POS 4 — Tarwiyah di Mina", emoji:"⛺", landmarkKey: "MINA", desc:"Bermalam di Mina pada 8 Dzulhijjah dalam keadaan ihram." },
+      { id:"ifrad_wukuf", pos:5, title:"POS 5 — Wukuf di Padang Arafah", emoji:"🏔️", landmarkKey: "ARAFAH", activityType: "wukuf", desc:"Puncak haji di Padang Arafah pada 9 Dzulhijjah." },
+      { id:"ifrad_muzdalifah", pos:6, title:"POS 6 — Mabit di Muzdalifah", emoji:"🌙", landmarkKey: "MUZDALIFAH", desc:"Mabit di Muzdalifah dan memungut kerikil." },
+      { id:"ifrad_jamarat_aqabah", pos:7, title:"POS 7 — Lempar Jumrah Aqabah", emoji:"🪨", landmarkKey: "JAMARAT", activityType: "jamarat", desc:"Melontar 7 butir kerikil ke Jumrah Aqabah pada 10 Dzulhijjah." },
+      { id:"ifrad_tahallul", pos:8, title:"POS 8 — Tahallul Awal (Cukur Rambut)", emoji:"✂️", landmarkKey: "MARWAH", desc:"Mencukur rambut. Tidak wajib membayar dam." },
+      { id:"ifrad_tawaf_ifadhah", pos:9, title:"POS 9 — Tawaf Ifadhah", emoji:"🕋", landmarkKey: "HAJAR_ASWAD", activityType: "tawaf", desc:"Tawaf Ifadhah 7 putaran rukun haji di Ka'bah." },
+      { id:"ifrad_tasyrik", pos:10, title:"POS 10 — Mabit Mina & Lempar 3 Jumrah", emoji:"⛺", landmarkKey: "JAMARAT", activityType: "jamarat", desc:"Bermalam di Mina dan melontar pilar jumrah pada hari tasyrik." },
+      { id:"ifrad_wada", pos:11, title:"POS 11 — Tawaf Wada'", emoji:"🚪", landmarkKey: "HAJAR_ASWAD", activityType: "tawaf", desc:"Tawaf perpisahan 7 putaran." },
+      { id:"ifrad_umrah_sunnah", pos:12, title:"POS 12 — Umrah Sunnah (Tan'im)", emoji:"✨", landmarkKey: "MARWAH", desc:"Ihram umrah dari Tan'im setelah seluruh rukun haji tuntas mabrur.", finish:true }
+    ];
+
+    POS_CHECKLIST_CONFIG.HAJI_TAMATTU = POS_CHECKLIST_CONFIG.HAJI;
+    POS_CHECKLIST_CONFIG.HAJI_QIRAN = POS_CHECKLIST_CONFIG.HAJI;
+    POS_CHECKLIST_CONFIG.HAJI_IFRAD = POS_CHECKLIST_CONFIG.HAJI;
 
     /* ===== NAMA LANDMARK & DETAIL PILIHAN AMALAN LENGKAP ===== */
     const LANDMARKS = {
@@ -3008,6 +3183,9 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         }
       } else if (data.type === "player:threw_pebble") {
         spawnRemotePebble(data);
+      } else if (data.type === "chat") {
+        toast(`💬 ${data.name || 'Santri'}: "${data.text}"`);
+        soundCorrect();
       } else if (data.type === "player:left") {
         updateOnlineCount(data.onlineCount);
         removeRemotePlayer(data.id);
@@ -4080,18 +4258,25 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
 
     /* ===== 📋 CONFIG & UNIVERSAL CHECKLIST SISTEM TIAP POS ===== */
     function getPosChecklistConfig(mode, pos) {
-      const m = mode || state.mode || "UMRAH";
+      let m = mode || state.mode || "UMRAH";
+      if (m === "HAJI_TAMATTU" || m === "HAJI_QIRAN" || m === "HAJI_IFRAD") {
+        if (!POS_CHECKLIST_CONFIG[m]) m = "HAJI";
+      }
       const p = pos || state.pos || 1;
       if (POS_CHECKLIST_CONFIG[m] && POS_CHECKLIST_CONFIG[m][p]) {
         return POS_CHECKLIST_CONFIG[m][p];
+      }
+      if (POS_CHECKLIST_CONFIG.HAJI && POS_CHECKLIST_CONFIG.HAJI[p]) {
+        return POS_CHECKLIST_CONFIG.HAJI[p];
       }
       return null;
     }
 
     function initPosProgress() {
-      if (!state.posProgress) state.posProgress = { UMRAH: {}, HAJI: {} };
-      if (!state.posProgress.UMRAH) state.posProgress.UMRAH = {};
-      if (!state.posProgress.HAJI) state.posProgress.HAJI = {};
+      if (!state.posProgress) state.posProgress = {};
+      ["UMRAH", "HAJI", "HAJI_TAMATTU", "HAJI_QIRAN", "HAJI_IFRAD"].forEach(mod => {
+        if (!state.posProgress[mod]) state.posProgress[mod] = {};
+      });
     }
 
     function isTaskDoneInPos(taskId, pos, mode) {
@@ -4099,6 +4284,9 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       const m = mode || state.mode || "UMRAH";
       const p = pos || state.pos || 1;
       if (state.posProgress[m] && state.posProgress[m][p] && state.posProgress[m][p][taskId]) {
+        return true;
+      }
+      if (state.posProgress["HAJI"] && state.posProgress["HAJI"][p] && state.posProgress["HAJI"][p][taskId]) {
         return true;
       }
       // Check legacy miqat sync
@@ -4340,6 +4528,14 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     function closeCongratsAndFollowMap() {
       closeModal("modal-pos-congrats");
       advanceToNextPosActual();
+      const posData = getCurrentPosData();
+      if (posData && posData.landmarkKey) {
+        const targetLm = LANDMARKS[posData.landmarkKey] || LANDMARKS.KABAH;
+        const dx = targetLm.x - playerPhysics.x;
+        const dz = targetLm.z - playerPhysics.z;
+        cameraController.yaw = Math.atan2(dx, dz);
+        toast(`🧭 Karakter diarahkan menuju Pos ${state.pos}: ${posData.title} melalui panduan peta & penunjuk sein.`);
+      }
     }
 
     function teleportToNextPosAndCloseCongrats() {
@@ -5029,6 +5225,24 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         });
       } else {
         listContainer.innerHTML = `<div style="text-align:center; padding:18px; color:#94a3b8;">Tidak ada amalan khusus di titik ini. Silakan kunjungi tempat manasik utama!</div>`;
+      }
+
+      const deckActTxt = document.getElementById("btn-deck-act-txt");
+      if (deckActTxt) {
+        if (state.pos === 1) {
+          deckActTxt.textContent = "📖 Buka Panduan Rukun & Niat Miqat ➔";
+        } else if (state.mode === "UMRAH") {
+          if (state.pos === 2) deckActTxt.textContent = "🕋 Mulai Tawaf (7 Putaran Ka'bah) ➔";
+          else if (state.pos === 3) deckActTxt.textContent = "🏃 Mulai Sa'i (7 Lintasan Shafa-Marwah) ➔";
+          else if (state.pos === 4) deckActTxt.textContent = "✂️ Mulai Tahallul (Potong Rambut) ➔";
+        } else {
+          if (posData && posData.activityType === "tawaf") deckActTxt.textContent = "🕋 Mulai Tawaf 7 Putaran Ka'bah ➔";
+          else if (posData && posData.activityType === "sai") deckActTxt.textContent = "🏃 Mulai Sa'i 7 Lintasan Shafa-Marwah ➔";
+          else if (posData && posData.activityType === "jamarat") deckActTxt.textContent = "🪨 Mulai Lempar Jumrah (7 Kerikil) ➔";
+          else if (posData && posData.activityType === "wukuf") deckActTxt.textContent = "🏔️ Mulai Wukuf di Padang Arafah ➔";
+          else if (posData && (posData.landmarkKey === "MARWAH" || posData.title.toLowerCase().includes("tahallul"))) deckActTxt.textContent = "✂️ Mulai Tahallul (Potong Rambut) ➔";
+          else deckActTxt.textContent = "🤲 Mulai Kegiatan Ibadah Pos Ini ➔";
+        }
       }
 
       const deckBtn = document.getElementById("btn-deck-quiz");
@@ -5921,6 +6135,11 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
 
       executeAmalanActual(sess.amalanIndex, sess.landmarkKey);
       updatePosAdvanceButton();
+
+      // Langsung bawa karakter santri untuk melaksanakan kegiatan nyata di pos ini
+      setTimeout(() => {
+        startCurrentPosActivityDirect();
+      }, 400);
     }
 
     function executeAmalanActual(index, lmKey) {
@@ -6358,6 +6577,216 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       }
     }
 
+    /* ===== ✂️ INTERAKTIF TAHALLUL (CUKUR RAMBUT) ===== */
+    function soundSnipSnip() {
+      if (state.isMuted) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+        [0, 0.12].forEach(offset => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(1400, now + offset);
+          osc.frequency.exponentialRampToValueAtTime(350, now + offset + 0.08);
+          gain.gain.setValueAtTime(0.3, now + offset);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.08);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now + offset);
+          osc.stop(now + offset + 0.09);
+        });
+      } catch (e) {}
+    }
+
+    function openTahallulModal() {
+      playBeep(480, 80);
+      const charAvatar = document.getElementById("tahallul-char-avatar");
+      if (charAvatar) {
+        charAvatar.textContent = state.gender === "L" ? "👦" : "🧕";
+      }
+      const successAnim = document.getElementById("tahallul-success-anim");
+      if (successAnim) successAnim.style.display = "none";
+      const doBtn = document.getElementById("btn-do-tahallul");
+      if (doBtn) {
+        doBtn.disabled = false;
+        doBtn.innerHTML = `<span>✂️ Klik untuk Memotong Rambut Sekarang (+50 Pahala)</span>`;
+        doBtn.style.opacity = "1";
+      }
+      const statusTxt = document.getElementById("tahallul-status-txt");
+      if (statusTxt) statusTxt.textContent = "Siap Melaksanakan Tahallul";
+
+      openModal("modal-tahallul");
+    }
+
+    function performInteractiveTahallul() {
+      soundSnipSnip();
+      hapticFeedback([40, 30, 60]);
+
+      const scissors = document.getElementById("tahallul-scissors-anim");
+      if (scissors) {
+        scissors.style.transform = "rotate(-35deg) scale(1.3)";
+        setTimeout(() => {
+          if (scissors) scissors.style.transform = "rotate(20deg) scale(0.9)";
+          setTimeout(() => {
+            if (scissors) scissors.style.transform = "rotate(0deg) scale(1)";
+          }, 150);
+        }, 150);
+      }
+
+      const doBtn = document.getElementById("btn-do-tahallul");
+      if (doBtn) {
+        doBtn.disabled = true;
+        doBtn.innerHTML = `<span>✅ Rambut Telah Dicukur (Selesai Mabrur)</span>`;
+        doBtn.style.opacity = "0.7";
+      }
+
+      const successAnim = document.getElementById("tahallul-success-anim");
+      if (successAnim) successAnim.style.display = "block";
+
+      const statusTxt = document.getElementById("tahallul-status-txt");
+      if (statusTxt) statusTxt.textContent = "🎉 Rukun Tahallul Berhasil Ditunaikan!";
+
+      // Mark tasks in checklist
+      markPosTaskDone("cukur", state.pos, state.mode);
+      markPosTaskDone("cukur_awal", state.pos, state.mode);
+      markPosTaskDone("doa_tahallul", state.pos, state.mode);
+      markPosTaskDone("tahallul_tsani", state.pos, state.mode);
+
+      state.pahala += 50;
+      showFloatingScore("+50 PAHALA TAHALLUL");
+      soundFinish();
+      saveLocalProgress();
+      updateHUD();
+      updatePosChecklistHUD();
+
+      // Trigger pos completion
+      completeLiveActivity();
+    }
+
+    function closeTahallulModalAndInspect() {
+      closeModal("modal-tahallul");
+      openPosChecklistModal();
+    }
+
+    /* ===== 🕋 LAUNCH CURRENT POS ACTIVITY DIRECTLY ===== */
+    function startCurrentPosActivityDirect() {
+      closeModal("modal-actions-deck");
+      const posData = getCurrentPosData();
+      if (!posData) return;
+
+      if (state.pos === 1) {
+        openMiqatGuideModal();
+      } else if (state.mode === "UMRAH") {
+        if (state.pos === 2) startInWorldActivity("tawaf");
+        else if (state.pos === 3) startInWorldActivity("sai");
+        else if (state.pos === 4) openTahallulModal();
+      } else { // HAJI, HAJI_TAMATTU, HAJI_QIRAN, HAJI_IFRAD
+        if (posData.activityType) {
+          startInWorldActivity(posData.activityType);
+        } else if (posData.landmarkKey === "ARAFAH") {
+          startInWorldActivity("wukuf");
+        } else if (posData.landmarkKey === "JAMARAT") {
+          startInWorldActivity("jamarat");
+        } else if (posData.landmarkKey === "MUZDALIFAH") {
+          openMuzdalifahPebbleModal();
+        } else if (posData.landmarkKey === "MARWAH" || posData.title.toLowerCase().includes("tahallul")) {
+          openTahallulModal();
+        } else {
+          startInWorldActivity("tawaf");
+        }
+      }
+    }
+
+    /* ===== 👥 MABAR (MAIN BARENG SANTRI REALTIME) ===== */
+    function openMabarModal() {
+      playBeep(480, 80);
+      const listEl = document.getElementById("mabar-players-list");
+      const countEl = document.getElementById("mabar-modal-count-txt");
+      if (!listEl) return;
+
+      listEl.innerHTML = "";
+      const totalOnline = remotePlayers.size + 1;
+      if (countEl) countEl.textContent = `${totalOnline} Santri Sedang Online`;
+
+      // 1. Current local player
+      const meRow = document.createElement("div");
+      meRow.style.cssText = "background:rgba(30,41,59,0.85); border:1.5px solid var(--color-gold); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;";
+      const curPosData = getCurrentPosData();
+      meRow.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.8rem;">${state.gender === "L" ? "👦" : "🧕"}</span>
+          <div>
+            <div style="font-weight:800; font-size:0.92rem; color:#fff;">${state.nama || state.username} <span style="font-size:0.72rem; color:var(--color-gold); font-weight:700;">(Anda)</span></div>
+            <div style="font-size:0.75rem; color:#94a3b8;">${state.mode} · ${curPosData ? curPosData.title : 'Pos ' + state.pos}</div>
+          </div>
+        </div>
+        <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981; padding:3px 8px; border-radius:999px; font-weight:700;">🟢 Online</span>
+      `;
+      listEl.appendChild(meRow);
+
+      // 2. Remote classmates
+      if (remotePlayers.size === 0) {
+        const emptyRow = document.createElement("div");
+        emptyRow.style.cssText = "text-align:center; padding:18px; color:#94a3b8; font-size:0.84rem;";
+        emptyRow.innerHTML = "Belum ada teman lain yang online saat ini. Buka aplikasi di perangkat lain atau bagikan tautan ini ke teman sekelas untuk mabar!";
+        listEl.appendChild(emptyRow);
+      } else {
+        remotePlayers.forEach(p => {
+          const row = document.createElement("div");
+          row.style.cssText = "background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;";
+          const posNum = p.pos || 1;
+          const dist = Math.hypot(p.targetX - playerPhysics.x, p.targetZ - playerPhysics.z);
+          row.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.8rem;">${p.gender === "L" ? "👦" : "🧕"}</span>
+              <div>
+                <div style="font-weight:800; font-size:0.92rem; color:#fff;">${p.name || "Santri"}</div>
+                <div style="font-size:0.75rem; color:#38bdf8;">Pos ${posNum} · Jarak ~${Math.round(dist)}m</div>
+              </div>
+            </div>
+            <button type="button" class="btn-main clickable" onclick="teleportToMabarPlayer('${p.id}')" style="width:auto; padding:6px 12px; font-size:0.78rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border-radius:8px;">
+              🚀 Samperin
+            </button>
+          `;
+          listEl.appendChild(row);
+        });
+      }
+
+      openModal("modal-mabar");
+    }
+
+    function teleportToMabarPlayer(id) {
+      const p = remotePlayers.get(id);
+      if (p) {
+        playerPhysics.x = p.targetX + (Math.random() - 0.5) * 2;
+        playerPhysics.z = p.targetZ + (Math.random() - 0.5) * 2;
+        playerPhysics.y = 1;
+        playerPhysics.vx = 0;
+        playerPhysics.vz = 0;
+        closeModal("modal-mabar");
+        soundCorrect();
+        toast(`🚀 Menghampiri santri ${p.name}! Ayo beribadah bareng.`);
+      }
+    }
+
+    function sendMultiplayerEmote(text) {
+      toast(`💬 Anda: ${text}`);
+      showFloatingScore(text);
+      soundCorrect();
+      if (multiplayerWs && multiplayerWs.readyState === WebSocket.OPEN) {
+        multiplayerWs.send(JSON.stringify({
+          type: "chat",
+          text: text,
+          name: state.nama,
+          x: playerPhysics.x,
+          y: playerPhysics.y,
+          z: playerPhysics.z
+        }));
+      }
+      closeModal("modal-mabar");
+    }
 
     function updateFloatingPebbles(dt) {
       for (let i = flyingPebbles.length - 1; i >= 0; i--) {
@@ -6389,17 +6818,37 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
         }
       }
 
-      if (isCurrentPosFullyCompleted(state.pos, state.mode)) {
-        toast("🎉 Alhamdulillah! Seluruh checklist rukun & amalan di pos ini telah tuntas mabrur.");
-      } else {
-        toast(`🎉 Alhamdulillah! Rukun ${completedType ? completedType.toUpperCase() : "ibadah"} selesai! Lengkapi sisa checklist pos ini.`);
-        updatePosChecklistHUD();
-      }
+      let actName = "kegiatan pos";
+      if (completedType === "tawaf") actName = "Tawaf Ka'bah (7 Putaran)";
+      else if (completedType === "sai") actName = "Sa'i Shafa-Marwah (7 Lintasan)";
+      else if (completedType === "jamarat") actName = "Lempar Jumrah (7 Kerikil)";
+      else if (completedType === "wukuf") actName = "Wukuf di Padang Arafah";
+      else if (completedType === "tahallul") actName = "Tahallul (Mencukur Rambut)";
+
+      state.pahala += 100;
+      showFloatingScore("+100 PAHALA");
+      saveLocalProgress();
+      updateHUD();
+      updatePosChecklistHUD();
+
+      // Notifikasi permohonan pengguna:
+      // "setelah selsai melakukan kegiatan pada pos tertentu maka ada notif selamat anda telah selsai menyelsaikan ...., kemudian karakter diarahkan untuk menuju pos selanjunya melalui map yang telah tersedia."
+      toast(`🎉 Selamat anda telah selesai menyelesaikan ${actName}!`);
+
+      const curPosObj = getCurrentPosData();
+      const modeList = ORDER[state.mode] || ORDER.UMRAH;
+      const nextPosObj = modeList.find(p => p.pos === state.pos + 1);
+
+      setTimeout(() => {
+        showPosCompletionCelebration(curPosObj, nextPosObj);
+      }, 700);
     }
 
     function advanceToNextPos() {
       if (!isCurrentPosFullyCompleted(state.pos, state.mode)) {
-        toast("⚠️ Selesaikan seluruh checklist rukun & amalan di pos ini terlebih dahulu sebelum lanjut!");
+        const posData = getCurrentPosData();
+        toast(`⚠️ Belum bisa lanjut ke pos berikutnya! Selesaikan seluruh kegiatan & checklist ${posData ? posData.title : 'pos ini'} terlebih dahulu.`);
+        soundWrong();
         openPosChecklistModal();
         return;
       }
@@ -6898,8 +7347,12 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
         if (modeBadge) {
           if (tempOnboardingMode === "UMRAH") {
             modeBadge.innerHTML = "🕋 <b>Ibadah Umrah</b> (4 Pos Rukun)";
-          } else {
-            modeBadge.innerHTML = "🏔️ <b>Haji Tamattu'</b> (13 Pos Lengkap)";
+          } else if (tempOnboardingMode === "HAJI_TAMATTU" || tempOnboardingMode === "HAJI") {
+            modeBadge.innerHTML = "🏔️ <b>Haji Tamatuk</b> (13 Pos Lengkap)";
+          } else if (tempOnboardingMode === "HAJI_QIRAN") {
+            modeBadge.innerHTML = "🔗 <b>Haji Qiran</b> (11 Pos Umrah & Haji Sekaligus)";
+          } else if (tempOnboardingMode === "HAJI_IFRAD") {
+            modeBadge.innerHTML = "👑 <b>Haji Ifrad</b> (12 Pos Haji Mandiri)";
           }
         }
         // Focus name input
@@ -6922,8 +7375,21 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       tempOnboardingMode = m;
       const bUmrah = document.getElementById("onboard-mode-umrah");
       const bHaji = document.getElementById("onboard-mode-haji");
+      const bQiran = document.getElementById("onboard-mode-qiran");
+      const bIfrad = document.getElementById("onboard-mode-ifrad");
+
       if (bUmrah) bUmrah.className = `onboarding-mode-btn ${m === "UMRAH" ? "selected" : ""}`;
-      if (bHaji) bHaji.className = `onboarding-mode-btn ${m === "HAJI" ? "selected" : ""}`;
+      if (bHaji) bHaji.className = `onboarding-mode-btn ${(m === "HAJI" || m === "HAJI_TAMATTU") ? "selected" : ""}`;
+      if (bQiran) bQiran.className = `onboarding-mode-btn ${m === "HAJI_QIRAN" ? "selected" : ""}`;
+      if (bIfrad) bIfrad.className = `onboarding-mode-btn ${m === "HAJI_IFRAD" ? "selected" : ""}`;
+
+      const selText = document.getElementById("onboard-selected-mode-text");
+      if (selText) {
+        if (m === "UMRAH") selText.textContent = "🕋 Ibadah Umrah (4 Pos Rukun)";
+        else if (m === "HAJI_TAMATTU" || m === "HAJI") selText.textContent = "🏔️ Haji Tamatuk (13 Pos Lengkap)";
+        else if (m === "HAJI_QIRAN") selText.textContent = "🔗 Haji Qiran (11 Pos Umrah & Haji Sekaligus)";
+        else if (m === "HAJI_IFRAD") selText.textContent = "👑 Haji Ifrad (12 Pos Haji Mandiri)";
+      }
     }
 
     function openOnboardingModal() {
@@ -6934,20 +7400,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       setOnboardingGender(state.gender || "L");
       setOnboardingMode(state.mode || "UMRAH");
 
-      // Check if session has previous active progress to offer quick resume
-      const resumeBanner = document.getElementById("onboard-resume-banner");
-      const resumeTxt = document.getElementById("onboard-resume-txt");
-      if (resumeBanner && resumeTxt) {
-        if (state.nama && state.nama !== "Santri Petualang") {
-          const currentPosObj = getCurrentPosData();
-          const posTitle = currentPosObj ? currentPosObj.title : `Pos ${state.pos}`;
-          resumeTxt.textContent = `Lanjutkan Sesi Terakhir (${state.nama} · ${state.mode} · ${posTitle})`;
-          resumeBanner.style.display = "block";
-        } else {
-          resumeBanner.style.display = "none";
-        }
-      }
-
+      // Halaman utama bersih dan langsung menampilkan 4 pilihan ibadah (tanpa riwayat/resume lama)
       goToOnboardingStep(1);
       openModal("modal-onboarding");
     }
@@ -6973,6 +7426,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       localStorage.setItem("ibq_user", state.userId);
       localStorage.setItem("ibq_nama", state.nama);
       localStorage.setItem("ibq_gender", state.gender);
+      localStorage.setItem("ibq_mode", state.mode);
 
       buildRobloxCharacter();
       updateHUD();
@@ -6980,6 +7434,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
 
       initTalbiyahAudioEngine();
       updateTalbiyahProximity();
+      initMultiplayer(); // Start Mabar realtime connection!
 
       teleportTo("MIQAT");
       soundFinish();
@@ -7039,17 +7494,10 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
     window.addEventListener("DOMContentLoaded", () => {
       loadLocalProgress();
       init3DWorld();
-      // Check if user has completed initial onboarding setup
-      const hasOnboarded = localStorage.getItem("ibq_onboarded") === "true";
-      if (!hasOnboarded) {
-        state.isGameStarted = false;
-        openOnboardingModal();
-      } else {
-        state.isGameStarted = true;
-        setTimeout(() => {
-          toast(`🕌 Ahlan wa Sahlan kembali, ${state.nama}! Tekan Q untuk amalan atau E untuk konsultasi fiqh.`);
-        }, 700);
-      }
+      initMultiplayer();
+      // Tampilan pertama: SELALU menampilkan halaman utama aplikasi (bukan langsung di permainan)
+      state.isGameStarted = false;
+      openOnboardingModal();
     });
   </script>
 
