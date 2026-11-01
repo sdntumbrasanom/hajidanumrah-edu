@@ -3896,6 +3896,7 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     let worldLabelsElements = {};
     let remotePlayers = new Map();
     let multiplayerWs = null;
+    let myPlayerId = null;
     let lastMultiplayerSend = 0;
 
     const playerPhysics = {
@@ -4547,6 +4548,28 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         ctx.fillText("Anda", pPlayer.mx, pPlayer.my + 16);
       }
 
+      // 3. Draw Classmates (Remote Players) on Minimap / Full Map
+      if (typeof remotePlayers !== "undefined" && remotePlayers.size > 0) {
+        remotePlayers.forEach(rp => {
+          const pr = w2m(rp.targetX, rp.targetZ);
+          const isFemale = rp.gender === "P";
+          ctx.fillStyle = isFemale ? "#ec4899" : "#0284c7";
+          ctx.beginPath();
+          ctx.arc(pr.mx, pr.my, isMini ? 4 : 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 1.2;
+          ctx.stroke();
+
+          if (!isMini) {
+            ctx.fillStyle = "#1e293b";
+            ctx.font = "bold 8.5px system-ui";
+            ctx.textAlign = "center";
+            ctx.fillText(rp.name || "Santri", pr.mx, pr.my + 12);
+          }
+        });
+      }
+
       ctx.restore();
     }
 
@@ -4828,6 +4851,13 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     /* ===== 🌐 MULTIPLAYER REALTIME ENGINE (WEBSOCKET /ws) ===== */
     function initMultiplayer() {
       if (multiplayerWs) {
+        if (multiplayerWs.readyState === WebSocket.OPEN) {
+          broadcastProfileUpdate();
+          return;
+        }
+        if (multiplayerWs.readyState === WebSocket.CONNECTING) {
+          return;
+        }
         try { multiplayerWs.close(); } catch (e) {}
       }
 
@@ -4841,14 +4871,16 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
           // Join world with current student credentials
           multiplayerWs.send(JSON.stringify({
             type: "join",
+            id: myPlayerId || undefined,
             name: state.nama || state.username || "Santri",
             gender: state.gender || "L",
             mode: state.mode || "UMRAH",
             pos: state.pos || 1,
-            x: playerPhysics.x,
-            y: playerPhysics.y,
-            z: playerPhysics.z,
-            rotY: playerPhysics.rotationY
+            x: Number(playerPhysics.x.toFixed(2)),
+            y: Number(playerPhysics.y.toFixed(2)),
+            z: Number(playerPhysics.z.toFixed(2)),
+            rotationY: Number(playerPhysics.rotationY.toFixed(3)),
+            rotY: Number(playerPhysics.rotationY.toFixed(3))
           }));
         };
 
@@ -4860,7 +4892,11 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         };
 
         multiplayerWs.onclose = () => {
-          setTimeout(initMultiplayer, 3000);
+          setTimeout(() => {
+            if (!multiplayerWs || multiplayerWs.readyState === WebSocket.CLOSED) {
+              initMultiplayer();
+            }
+          }, 3000);
         };
 
         multiplayerWs.onerror = () => {};
@@ -4871,37 +4907,60 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       if (!data || !data.type) return;
 
       if (data.type === "init") {
-        updateOnlineCount(data.onlineCount || 1);
+        myPlayerId = data.yourId;
+        updateOnlineCount(data.onlineCount || (Array.isArray(data.players) ? data.players.length : 1));
         if (Array.isArray(data.players)) {
           data.players.forEach(p => {
-            if (p.id !== data.yourId) spawnRemotePlayer(p);
+            if (p && p.id && p.id !== data.yourId) {
+              spawnRemotePlayer(p);
+            }
           });
         }
+        refreshMabarModalPlayerList();
       } else if (data.type === "player:joined") {
         updateOnlineCount(data.onlineCount);
-        spawnRemotePlayer(data.player);
-        toast(`👋 Santri ${data.player.name} bergabung ke dalam Tanah Suci!`);
+        if (data.player && data.player.id && data.player.id !== myPlayerId) {
+          spawnRemotePlayer(data.player);
+          toast(`👋 Santri ${data.player.name || "Santri"} bergabung ke dalam Tanah Suci!`);
+        }
+        refreshMabarModalPlayerList();
       } else if (data.type === "player:moved") {
-        const p = remotePlayers.get(data.id);
+        if (myPlayerId && data.id === myPlayerId) return;
+
+        let p = remotePlayers.get(data.id);
+        if (!p) {
+          spawnRemotePlayer(data);
+          p = remotePlayers.get(data.id);
+        }
         if (p) {
-          p.targetX = data.x;
-          p.targetY = data.y;
-          p.targetZ = data.z;
-          p.targetRotY = data.rotY;
+          if (typeof data.x === "number" && !isNaN(data.x)) p.targetX = data.x;
+          if (typeof data.y === "number" && !isNaN(data.y)) p.targetY = data.y;
+          if (typeof data.z === "number" && !isNaN(data.z)) p.targetZ = data.z;
+
+          const r = typeof data.rotationY === "number" ? data.rotationY : (typeof data.rotY === "number" ? data.rotY : null);
+          if (r !== null && !isNaN(r)) p.targetRotY = r;
+
           p.isMoving = !!data.isMoving;
+          if (data.name && data.name !== p.name) p.name = data.name;
+          if (data.gender && data.gender !== p.gender) p.gender = data.gender;
           if (data.pos && data.pos !== p.pos) {
             p.pos = data.pos;
             updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
           }
         }
       } else if (data.type === "player:updated") {
-        const p = remotePlayers.get(data.id);
+        const pObj = data.player || data;
+        if (!pObj || !pObj.id || pObj.id === myPlayerId) return;
+        const p = remotePlayers.get(pObj.id);
         if (p) {
-          p.name = data.name || p.name;
-          p.gender = data.gender || p.gender;
-          p.pos = data.pos || p.pos;
+          p.name = pObj.name || p.name;
+          p.gender = pObj.gender || p.gender;
+          p.pos = pObj.pos || p.pos;
           updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
+        } else {
+          spawnRemotePlayer(pObj);
         }
+        refreshMabarModalPlayerList();
       } else if (data.type === "player:threw_pebble") {
         spawnRemotePebble(data);
       } else if (data.type === "chat") {
@@ -4910,32 +4969,42 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       } else if (data.type === "player:left") {
         updateOnlineCount(data.onlineCount);
         removeRemotePlayer(data.id);
+        refreshMabarModalPlayerList();
       }
     }
 
     function spawnRemotePlayer(p) {
       if (!p || !p.id || remotePlayers.has(p.id)) return;
+      if (myPlayerId && p.id === myPlayerId) return;
+
+      const px = typeof p.x === "number" && !isNaN(p.x) ? p.x : -60;
+      const py = typeof p.y === "number" && !isNaN(p.y) ? p.y : 0;
+      const pz = typeof p.z === "number" && !isNaN(p.z) ? p.z : 50;
+      const rot = typeof p.rotationY === "number" && !isNaN(p.rotationY) ? p.rotationY : (typeof p.rotY === "number" && !isNaN(p.rotY) ? p.rotY : 0);
 
       const avatar = createRobloxAvatar(p.gender || "L", p.name || "Santri", false, p.pos || 1);
-      avatar.group.position.set(p.x || 0, p.y || 0, p.z || 0);
-      avatar.group.rotation.y = p.rotY || 0;
+      avatar.group.position.set(px, py, pz);
+      avatar.group.rotation.y = rot;
+      avatar.group.visible = true;
       scene.add(avatar.group);
 
       remotePlayers.set(p.id, {
         id: p.id,
-        name: p.name,
-        gender: p.gender,
+        name: p.name || "Santri",
+        gender: p.gender || "L",
         pos: p.pos || 1,
         group: avatar.group,
         limbs: avatar.limbs,
         nametagSprite: avatar.nametagSprite,
-        targetX: p.x || 0,
-        targetY: p.y || 0,
-        targetZ: p.z || 0,
-        targetRotY: p.rotY || 0,
+        targetX: px,
+        targetY: py,
+        targetZ: pz,
+        targetRotY: rot,
         isMoving: false,
         walkAnimTimer: Math.random() * 5
       });
+
+      refreshMabarModalPlayerList();
     }
 
     function removeRemotePlayer(id) {
@@ -4944,29 +5013,42 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         if (p.group) scene.remove(p.group);
         remotePlayers.delete(id);
       }
+      refreshMabarModalPlayerList();
     }
 
     function updateOnlineCount(count) {
       const el = document.getElementById("online-count-val");
       const guruEl = document.getElementById("guru-stat-online");
-      const countVal = Math.max(1, count || 1);
+      const countVal = Math.max(1, count || (remotePlayers.size + 1));
       if (el) el.textContent = countVal.toString();
       if (guruEl) guruEl.textContent = countVal.toString();
     }
 
     function updateRemotePlayers(dt, now) {
       remotePlayers.forEach(p => {
+        if (!p.group) return;
+
         // Smooth position interpolation (lerp)
         const lerpFactor = Math.min(dt * 12, 1);
-        p.group.position.x += (p.targetX - p.group.position.x) * lerpFactor;
-        p.group.position.y += (p.targetY - p.group.position.y) * lerpFactor;
-        p.group.position.z += (p.targetZ - p.group.position.z) * lerpFactor;
+        if (typeof p.targetX === "number" && !isNaN(p.targetX)) {
+          p.group.position.x += (p.targetX - p.group.position.x) * lerpFactor;
+        }
+        if (typeof p.targetY === "number" && !isNaN(p.targetY)) {
+          p.group.position.y += (p.targetY - p.group.position.y) * lerpFactor;
+        }
+        if (typeof p.targetZ === "number" && !isNaN(p.targetZ)) {
+          p.group.position.z += (p.targetZ - p.group.position.z) * lerpFactor;
+        }
 
-        // Smooth rotation
-        let diffRot = p.targetRotY - p.group.rotation.y;
+        // Smooth rotation without NaN
+        const targetRot = typeof p.targetRotY === "number" && !isNaN(p.targetRotY) ? p.targetRotY : 0;
+        let curRot = p.group.rotation.y;
+        if (isNaN(curRot)) curRot = 0;
+
+        let diffRot = targetRot - curRot;
         while (diffRot < -Math.PI) diffRot += Math.PI * 2;
         while (diffRot > Math.PI) diffRot -= Math.PI * 2;
-        p.group.rotation.y += diffRot * lerpFactor;
+        p.group.rotation.y = curRot + diffRot * lerpFactor;
 
         // Limbs walk animation
         if (p.limbs && p.limbs.armL && p.limbs.armR) {
@@ -4975,16 +5057,16 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
             const swing = Math.sin(p.walkAnimTimer);
             p.limbs.armL.rotation.x = swing * 0.75;
             p.limbs.armR.rotation.x = -swing * 0.75;
-            p.limbs.legL.rotation.x = -swing * 0.75;
-            p.limbs.legR.rotation.x = swing * 0.75;
-            p.limbs.torso.position.y = 1.6 + Math.abs(Math.sin(p.walkAnimTimer * 2)) * 0.08;
+            if (p.limbs.legL) p.limbs.legL.rotation.x = -swing * 0.75;
+            if (p.limbs.legR) p.limbs.legR.rotation.x = swing * 0.75;
+            if (p.limbs.torso) p.limbs.torso.position.y = 1.6 + Math.abs(Math.sin(p.walkAnimTimer * 2)) * 0.08;
           } else {
             const breathe = Math.sin(now * 0.003 + (p.id ? p.id.charCodeAt(0) : 0)) * 0.04;
             p.limbs.armL.rotation.x = breathe;
             p.limbs.armR.rotation.x = -breathe;
-            p.limbs.legL.rotation.x = 0;
-            p.limbs.legR.rotation.x = 0;
-            p.limbs.torso.position.y = 1.6;
+            if (p.limbs.legL) p.limbs.legL.rotation.x = 0;
+            if (p.limbs.legR) p.limbs.legR.rotation.x = 0;
+            if (p.limbs.torso) p.limbs.torso.position.y = 1.6;
           }
         }
       });
@@ -4998,9 +5080,13 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
 
       multiplayerWs.send(JSON.stringify({
         type: "move",
+        id: myPlayerId,
+        name: state.nama || state.username || "Santri",
+        gender: state.gender || "L",
         x: Number(playerPhysics.x.toFixed(2)),
         y: Number(playerPhysics.y.toFixed(2)),
         z: Number(playerPhysics.z.toFixed(2)),
+        rotationY: Number(playerPhysics.rotationY.toFixed(3)),
         rotY: Number(playerPhysics.rotationY.toFixed(3)),
         isMoving: !!isMoving,
         pos: state.pos
@@ -5011,6 +5097,7 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
       multiplayerWs.send(JSON.stringify({
         type: "update_profile",
+        id: myPlayerId,
         name: state.nama || state.username,
         gender: state.gender,
         mode: state.mode,
@@ -5019,6 +5106,103 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       if (localNametagSprite) {
         updateNametagSprite(localNametagSprite, state.nama || state.username, true, state.gender, state.pos);
       }
+    }
+
+    function openMabarModal() {
+      playBeep(480, 80);
+      refreshMabarModalPlayerList();
+      openModal("modal-mabar");
+    }
+
+    function refreshMabarModalPlayerList() {
+      const listEl = document.getElementById("mabar-players-list");
+      const countEl = document.getElementById("mabar-modal-count-txt");
+      const totalCount = remotePlayers.size + 1;
+
+      if (countEl) countEl.textContent = `${totalCount} Santri Online`;
+
+      if (!listEl) return;
+      listEl.innerHTML = "";
+
+      // 1. Local Player Item
+      const myItem = document.createElement("div");
+      myItem.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.85); border:1.5px solid var(--color-gold); border-radius:10px; padding:10px 14px;";
+      myItem.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:1.6rem;">${state.gender === "P" ? "🧕" : "👦"}</span>
+          <div>
+            <div style="font-weight:800; font-size:0.92rem; color:#fff;">
+              ${state.nama || state.username || "Santri"} <span style="font-size:0.75rem; color:var(--color-gold);">(Anda)</span>
+            </div>
+            <div style="font-size:0.75rem; color:#94a3b8;">
+              ${state.mode} · POS ${state.pos} · ✨ ${(state.pahala || 0).toLocaleString("id-ID")} Pahala
+            </div>
+          </div>
+        </div>
+        <span style="font-size:0.75rem; font-weight:800; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:3px 10px; border-radius:6px;">
+          🟢 Karakter Anda
+        </span>
+      `;
+      listEl.appendChild(myItem);
+
+      // 2. Remote Players Items
+      if (remotePlayers.size === 0) {
+        const emptyDiv = document.createElement("div");
+        emptyDiv.style.cssText = "text-align:center; padding:18px; color:#94a3b8; font-size:0.85rem; background:rgba(15,23,42,0.6); border-radius:10px; border:1px dashed rgba(255,255,255,0.15);";
+        emptyDiv.innerHTML = "⏳ Belum ada teman lain yang bergabung. Bagikan tautan web ini ke teman sekelas untuk mabar bersama!";
+        listEl.appendChild(emptyDiv);
+      } else {
+        remotePlayers.forEach(rp => {
+          const item = document.createElement("div");
+          item.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px;";
+          const avatar = rp.gender === "P" ? "🧕" : "👦";
+          item.innerHTML = `
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.6rem;">${avatar}</span>
+              <div>
+                <div style="font-weight:800; font-size:0.92rem; color:#fff;">${rp.name || "Santri Teman"}</div>
+                <div style="font-size:0.75rem; color:#38bdf8;">Sedang di POS ${rp.pos || 1}</div>
+              </div>
+            </div>
+            <button type="button" class="btn-main clickable" onclick="teleportToRemotePlayer('${rp.id}')" style="width:auto; padding:6px 14px; font-size:0.78rem; background:rgba(56,189,248,0.2); border:1px solid #38bdf8; color:#38bdf8;">
+              ⚡ Samperin
+            </button>
+          `;
+          listEl.appendChild(item);
+        });
+      }
+    }
+
+    function teleportToRemotePlayer(id) {
+      const rp = remotePlayers.get(id);
+      if (!rp) return;
+      playBeep(520, 80);
+      playerPhysics.x = rp.targetX + (Math.random() - 0.5) * 2;
+      playerPhysics.z = rp.targetZ + (Math.random() - 0.5) * 2;
+      playerPhysics.y = 1;
+      playerPhysics.vx = 0;
+      playerPhysics.vz = 0;
+      closeModal("modal-mabar");
+      toast(`⚡ Berhasil teleport mendekati teman: ${rp.name}!`);
+    }
+
+    function sendMultiplayerEmote(text) {
+      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) {
+        toast("⚠️ Belum terhubung ke server Mabar!");
+        return;
+      }
+      playBeep(580, 80);
+      multiplayerWs.send(JSON.stringify({
+        type: "chat",
+        id: myPlayerId,
+        name: state.nama || state.username || "Santri",
+        text: text,
+        x: playerPhysics.x,
+        y: playerPhysics.y,
+        z: playerPhysics.z
+      }));
+      toast(`💬 Anda: "${text}"`);
+      soundCorrect();
     }
 
     function broadcastThrowPebble(pillarKey) {
@@ -9215,7 +9399,6 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
     window.addEventListener("DOMContentLoaded", () => {
       loadLocalProgress();
       init3DWorld();
-      initMultiplayer();
       // Tampilan pertama: SELALU menampilkan halaman utama aplikasi (bukan langsung di permainan)
       state.isGameStarted = false;
       openOnboardingModal();

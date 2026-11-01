@@ -141,6 +141,7 @@ wss.on('connection', (ws) => {
 
       if (msg.type === 'join') {
         const id = msg.id || 'player_' + Math.random().toString(36).substring(2, 9);
+        const rotY = typeof msg.rotationY === 'number' ? msg.rotationY : (typeof msg.rotY === 'number' ? msg.rotY : 0);
         const player: PlayerState = {
           id,
           name: msg.name || 'Santri',
@@ -150,7 +151,7 @@ wss.on('connection', (ws) => {
           x: typeof msg.x === 'number' ? msg.x : -60,
           y: typeof msg.y === 'number' ? msg.y : 0.5,
           z: typeof msg.z === 'number' ? msg.z : 50,
-          rotationY: typeof msg.rotationY === 'number' ? msg.rotationY : 0,
+          rotationY: rotY,
           anim: 'idle',
           lastSeen: Date.now()
         };
@@ -162,12 +163,14 @@ wss.on('connection', (ws) => {
         ws.send(JSON.stringify({
           type: 'init',
           yourId: id,
+          onlineCount: connectedPlayers.size,
           players: Array.from(connectedPlayers.values())
         }));
 
         // Broadcast to other players that new student joined
         broadcast({
           type: 'player:joined',
+          onlineCount: connectedPlayers.size,
           player
         }, ws);
       }
@@ -177,23 +180,33 @@ wss.on('connection', (ws) => {
         if (!id) return;
         const p = connectedPlayers.get(id);
         if (p) {
-          p.x = msg.x;
-          p.y = msg.y;
-          p.z = msg.z;
-          p.rotationY = msg.rotationY;
-          p.anim = msg.anim || 'idle';
+          if (typeof msg.x === 'number') p.x = msg.x;
+          if (typeof msg.y === 'number') p.y = msg.y;
+          if (typeof msg.z === 'number') p.z = msg.z;
+          const rotY = typeof msg.rotationY === 'number' ? msg.rotationY : (typeof msg.rotY === 'number' ? msg.rotY : p.rotationY);
+          if (typeof rotY === 'number' && !isNaN(rotY)) {
+            p.rotationY = rotY;
+          }
+          p.anim = msg.anim || (msg.isMoving ? 'walk' : 'idle');
+          if (typeof msg.isMoving === 'boolean') (p as any).isMoving = msg.isMoving;
           if (msg.pos) p.pos = msg.pos;
+          if (msg.name) p.name = msg.name;
+          if (msg.gender) p.gender = msg.gender;
           p.lastSeen = Date.now();
 
           broadcast({
             type: 'player:moved',
             id,
+            name: p.name,
+            gender: p.gender,
+            pos: p.pos,
             x: p.x,
             y: p.y,
             z: p.z,
             rotationY: p.rotationY,
-            anim: p.anim,
-            pos: p.pos
+            rotY: p.rotationY,
+            isMoving: !!(p as any).isMoving,
+            anim: p.anim
           }, ws);
         }
       }
@@ -211,6 +224,7 @@ wss.on('connection', (ws) => {
 
           broadcast({
             type: 'player:updated',
+            onlineCount: connectedPlayers.size,
             player: p
           });
         }
@@ -222,7 +236,10 @@ wss.on('connection', (ws) => {
         broadcast({
           type: 'player:threw_pebble',
           id,
-          pillarKey: msg.pillarKey || 'AQABAH'
+          pillarKey: msg.pillarKey || 'AQABAH',
+          x: msg.x,
+          y: msg.y,
+          z: msg.z
         }, ws);
       }
 
@@ -256,7 +273,7 @@ wss.on('connection', (ws) => {
     if (id) {
       connectedPlayers.delete(id);
       socketToPlayerId.delete(ws);
-      broadcast({ type: 'player:left', id });
+      broadcast({ type: 'player:left', id, onlineCount: connectedPlayers.size });
     }
   });
 });
@@ -267,7 +284,7 @@ setInterval(() => {
   for (const [id, player] of connectedPlayers.entries()) {
     if (now - player.lastSeen > 45000) {
       connectedPlayers.delete(id);
-      broadcast({ type: 'player:left', id });
+      broadcast({ type: 'player:left', id, onlineCount: connectedPlayers.size });
     }
   }
 }, 10000);
