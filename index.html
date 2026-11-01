@@ -36,6 +36,8 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     import * as THREE from 'three';
     window.THREE = THREE;
   </script>
+  <!-- MQTT Realtime Engine for Universal GitHub Pages & Multi-Device Mabar -->
+  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.4/dist/mqtt.min.js"></script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -3896,8 +3898,13 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     let worldLabelsElements = {};
     let remotePlayers = new Map();
     let multiplayerWs = null;
+    let multiplayerMqtt = null;
+    let multiplayerBroadcastChannel = null;
     let myPlayerId = null;
     let lastMultiplayerSend = 0;
+    const MABAR_TOPIC = "sdntumbrasanom/hajidanumrah/mabar/v1";
+    const MQTT_BROKER_URL = "wss://broker.emqx.io:8084/mqtt";
+    const MQTT_BACKUP_BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
 
     const playerPhysics = {
       x: -60, y: 0, z: 50,
@@ -4848,30 +4855,242 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       }
     }
 
-    /* ===== 🌐 MULTIPLAYER REALTIME ENGINE (WEBSOCKET /ws) ===== */
+    /* ===== 🌐 MULTIPLAYER REALTIME ENGINE (UNIVERSAL GITHUB PAGES & MULTI-DEVICE) ===== */
+    let heartbeatTimer = null;
+
     function initMultiplayer() {
-      if (multiplayerWs) {
-        if (multiplayerWs.readyState === WebSocket.OPEN) {
-          broadcastProfileUpdate();
-          return;
+      // 1. Ensure Persistent Client ID
+      if (!myPlayerId) {
+        let savedId = null;
+        try { savedId = localStorage.getItem("ibq_client_id"); } catch (e) {}
+        if (!savedId) {
+          savedId = "santri_" + Math.random().toString(36).substring(2, 9);
+          try { localStorage.setItem("ibq_client_id", savedId); } catch (e) {}
         }
-        if (multiplayerWs.readyState === WebSocket.CONNECTING) {
-          return;
-        }
-        try { multiplayerWs.close(); } catch (e) {}
+        myPlayerId = savedId;
       }
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      // 2. Initialize Local Same-Browser Cross-Tab Channel (0ms latency)
+      if (!multiplayerBroadcastChannel && typeof BroadcastChannel !== "undefined") {
+        try {
+          multiplayerBroadcastChannel = new BroadcastChannel("ibadahquest_sdntumbrasanom_mabar");
+          multiplayerBroadcastChannel.onmessage = (event) => {
+            try {
+              const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+              handleMultiplayerMessage(data);
+            } catch (e) {}
+          };
+        } catch (e) {}
+      }
 
-      try {
-        multiplayerWs = new WebSocket(wsUrl);
+      // 3. Connect to Global Free Realtime MQTT WebSocket Broker (Universal for GitHub Pages & All Devices)
+      if (typeof window.mqtt !== "undefined" && (!multiplayerMqtt || !multiplayerMqtt.connected)) {
+        try {
+          const willPayload = JSON.stringify({ type: "player:left", id: myPlayerId });
+          multiplayerMqtt = window.mqtt.connect(MQTT_BROKER_URL, {
+            keepalive: 30,
+            clean: true,
+            clientId: myPlayerId + "_" + Math.random().toString(36).substring(2, 6),
+            reconnectPeriod: 3000,
+            connectTimeout: 8000,
+            will: {
+              topic: MABAR_TOPIC,
+              payload: willPayload,
+              qos: 0,
+              retain: false
+            }
+          });
 
-        multiplayerWs.onopen = () => {
-          // Join world with current student credentials
-          multiplayerWs.send(JSON.stringify({
-            type: "join",
-            id: myPlayerId || undefined,
+          multiplayerMqtt.on("connect", () => {
+            multiplayerMqtt.subscribe(MABAR_TOPIC, { qos: 0 }, (err) => {
+              if (!err) {
+                // Announce self presence to all students
+                broadcastMultiplayerPacket({
+                  type: "join",
+                  id: myPlayerId,
+                  name: state.nama || state.username || "Santri",
+                  gender: state.gender || "L",
+                  mode: state.mode || "UMRAH",
+                  pos: state.pos || 1,
+                  x: Number(playerPhysics.x.toFixed(2)),
+                  y: Number(playerPhysics.y.toFixed(2)),
+                  z: Number(playerPhysics.z.toFixed(2)),
+                  rotationY: Number(playerPhysics.rotationY.toFixed(3)),
+                  rotY: Number(playerPhysics.rotationY.toFixed(3))
+                });
+              }
+            });
+          });
+
+          multiplayerMqtt.on("message", (topic, message) => {
+            if (topic === MABAR_TOPIC) {
+              try {
+                const data = JSON.parse(message.toString());
+                handleMultiplayerMessage(data);
+              } catch (e) {}
+            }
+          });
+
+          multiplayerMqtt.on("error", () => {
+            // Silently try backup broker if primary fails
+            if (multiplayerMqtt && !multiplayerMqtt.connected) {
+              try {
+                multiplayerMqtt.end(true);
+                multiplayerMqtt = window.mqtt.connect(MQTT_BACKUP_BROKER_URL, {
+                  keepalive: 30,
+                  clientId: myPlayerId + "_" + Math.random().toString(36).substring(2, 6),
+                  reconnectPeriod: 4000
+                });
+              } catch (e) {}
+            }
+          });
+        } catch (e) {}
+      }
+
+      // 4. Connect to Local Node.js /ws Server (if running on localhost)
+      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (isLocalhost && !multiplayerWs) {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+        try {
+          multiplayerWs = new WebSocket(wsUrl);
+
+          multiplayerWs.onopen = () => {
+            multiplayerWs.send(JSON.stringify({
+              type: "join",
+              id: myPlayerId,
+              name: state.nama || state.username || "Santri",
+              gender: state.gender || "L",
+              mode: state.mode || "UMRAH",
+              pos: state.pos || 1,
+              x: Number(playerPhysics.x.toFixed(2)),
+              y: Number(playerPhysics.y.toFixed(2)),
+              z: Number(playerPhysics.z.toFixed(2)),
+              rotationY: Number(playerPhysics.rotationY.toFixed(3)),
+              rotY: Number(playerPhysics.rotationY.toFixed(3))
+            }));
+          };
+
+          multiplayerWs.onmessage = (event) => {
+            try {
+              const data = JSON.parse(event.data);
+              handleMultiplayerMessage(data);
+            } catch (e) {}
+          };
+
+          multiplayerWs.onclose = () => {
+            multiplayerWs = null;
+          };
+
+          multiplayerWs.onerror = () => {};
+        } catch (e) {}
+      }
+
+      // 5. Setup Heartbeat and Stale Presence Cleanup Timer
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(() => {
+        // Send heartbeat to all peers
+        broadcastMultiplayerPacket({
+          type: "heartbeat",
+          id: myPlayerId,
+          name: state.nama || state.username || "Santri",
+          gender: state.gender || "L",
+          mode: state.mode || "UMRAH",
+          pos: state.pos || 1,
+          x: Number(playerPhysics.x.toFixed(2)),
+          y: Number(playerPhysics.y.toFixed(2)),
+          z: Number(playerPhysics.z.toFixed(2)),
+          rotationY: Number(playerPhysics.rotationY.toFixed(3)),
+          rotY: Number(playerPhysics.rotationY.toFixed(3)),
+          isMoving: !!playerPhysics.isMoving
+        });
+
+        // Auto-remove inactive players that haven't sent heartbeats in 14s
+        const now = Date.now();
+        remotePlayers.forEach((p, id) => {
+          if (p.lastSeen && now - p.lastSeen > 14000) {
+            removeRemotePlayer(id);
+          }
+        });
+
+        updateOnlineCount();
+      }, 3500);
+
+      // Initial Join Broadcast
+      broadcastMultiplayerPacket({
+        type: "join",
+        id: myPlayerId,
+        name: state.nama || state.username || "Santri",
+        gender: state.gender || "L",
+        mode: state.mode || "UMRAH",
+        pos: state.pos || 1,
+        x: Number(playerPhysics.x.toFixed(2)),
+        y: Number(playerPhysics.y.toFixed(2)),
+        z: Number(playerPhysics.z.toFixed(2)),
+        rotationY: Number(playerPhysics.rotationY.toFixed(3)),
+        rotY: Number(playerPhysics.rotationY.toFixed(3))
+      });
+
+      updateOnlineCount();
+    }
+
+    // Unified broadcast function across all active transports
+    function broadcastMultiplayerPacket(packet) {
+      if (!packet) return;
+      packet.senderId = myPlayerId;
+      if (!packet.id) packet.id = myPlayerId;
+      packet.timestamp = Date.now();
+
+      const raw = JSON.stringify(packet);
+
+      // Transport A: BroadcastChannel (same browser tabs)
+      if (multiplayerBroadcastChannel) {
+        try { multiplayerBroadcastChannel.postMessage(raw); } catch (e) {}
+      }
+
+      // Transport B: Local Node.js WebSocket (localhost)
+      if (multiplayerWs && multiplayerWs.readyState === WebSocket.OPEN) {
+        try { multiplayerWs.send(raw); } catch (e) {}
+      }
+
+      // Transport C: Public Global MQTT Broker (GitHub Pages & all remote devices)
+      if (multiplayerMqtt && multiplayerMqtt.connected) {
+        try { multiplayerMqtt.publish(MABAR_TOPIC, raw, { qos: 0 }); } catch (e) {}
+      }
+    }
+
+    function handleMultiplayerMessage(data) {
+      if (!data || !data.type) return;
+
+      // Filter out self-sent messages and echoes
+      if (data.senderId === myPlayerId || data.id === myPlayerId) return;
+
+      // 1. Initial player list from centralized WS server (if applicable)
+      if (data.type === "init") {
+        if (data.yourId) myPlayerId = data.yourId;
+        if (Array.isArray(data.players)) {
+          data.players.forEach(p => {
+            if (p && p.id && p.id !== myPlayerId) {
+              spawnRemotePlayer(p);
+            }
+          });
+        }
+        updateOnlineCount();
+      }
+
+      // 2. New player joined -> spawn them and reply with our state
+      else if (data.type === "join") {
+        const pObj = data.player || data;
+        if (pObj && pObj.id && pObj.id !== myPlayerId) {
+          spawnRemotePlayer(pObj);
+          toast(`👋 Santri ${pObj.name || "Santri"} bergabung ke dalam Tanah Suci!`);
+
+          // Reply back with our current state so the newcomer discovers us immediately
+          broadcastMultiplayerPacket({
+            type: "sync_reply",
+            targetId: pObj.id,
+            id: myPlayerId,
             name: state.nama || state.username || "Santri",
             gender: state.gender || "L",
             mode: state.mode || "UMRAH",
@@ -4881,58 +5100,52 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
             z: Number(playerPhysics.z.toFixed(2)),
             rotationY: Number(playerPhysics.rotationY.toFixed(3)),
             rotY: Number(playerPhysics.rotationY.toFixed(3))
-          }));
-        };
-
-        multiplayerWs.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            handleMultiplayerMessage(data);
-          } catch (e) {}
-        };
-
-        multiplayerWs.onclose = () => {
-          setTimeout(() => {
-            if (!multiplayerWs || multiplayerWs.readyState === WebSocket.CLOSED) {
-              initMultiplayer();
-            }
-          }, 3000);
-        };
-
-        multiplayerWs.onerror = () => {};
-      } catch (e) {}
-    }
-
-    function handleMultiplayerMessage(data) {
-      if (!data || !data.type) return;
-
-      if (data.type === "init") {
-        myPlayerId = data.yourId;
-        updateOnlineCount(data.onlineCount || (Array.isArray(data.players) ? data.players.length : 1));
-        if (Array.isArray(data.players)) {
-          data.players.forEach(p => {
-            if (p && p.id && p.id !== data.yourId) {
-              spawnRemotePlayer(p);
-            }
           });
         }
-        refreshMabarModalPlayerList();
-      } else if (data.type === "player:joined") {
-        updateOnlineCount(data.onlineCount);
-        if (data.player && data.player.id && data.player.id !== myPlayerId) {
-          spawnRemotePlayer(data.player);
-          toast(`👋 Santri ${data.player.name || "Santri"} bergabung ke dalam Tanah Suci!`);
-        }
-        refreshMabarModalPlayerList();
-      } else if (data.type === "player:moved") {
-        if (myPlayerId && data.id === myPlayerId) return;
+        updateOnlineCount();
+      }
 
+      // 3. Response to our join message
+      else if (data.type === "sync_reply") {
+        if (data.targetId && data.targetId !== myPlayerId) return;
+        if (data.id && data.id !== myPlayerId) {
+          spawnRemotePlayer(data);
+        }
+        updateOnlineCount();
+      }
+
+      // 4. Heartbeat packet
+      else if (data.type === "heartbeat") {
         let p = remotePlayers.get(data.id);
         if (!p) {
           spawnRemotePlayer(data);
           p = remotePlayers.get(data.id);
         }
         if (p) {
+          p.lastSeen = Date.now();
+          if (typeof data.x === "number" && !isNaN(data.x)) p.targetX = data.x;
+          if (typeof data.y === "number" && !isNaN(data.y)) p.targetY = data.y;
+          if (typeof data.z === "number" && !isNaN(data.z)) p.targetZ = data.z;
+          const r = typeof data.rotationY === "number" ? data.rotationY : (typeof data.rotY === "number" ? data.rotY : null);
+          if (r !== null && !isNaN(r)) p.targetRotY = r;
+          if (data.name && data.name !== p.name) p.name = data.name;
+          if (data.pos && data.pos !== p.pos) {
+            p.pos = data.pos;
+            updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
+          }
+        }
+        updateOnlineCount();
+      }
+
+      // 5. Movement packet
+      else if (data.type === "move" || data.type === "player:moved") {
+        let p = remotePlayers.get(data.id);
+        if (!p) {
+          spawnRemotePlayer(data);
+          p = remotePlayers.get(data.id);
+        }
+        if (p) {
+          p.lastSeen = Date.now();
           if (typeof data.x === "number" && !isNaN(data.x)) p.targetX = data.x;
           if (typeof data.y === "number" && !isNaN(data.y)) p.targetY = data.y;
           if (typeof data.z === "number" && !isNaN(data.z)) p.targetZ = data.z;
@@ -4948,7 +5161,10 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
             updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
           }
         }
-      } else if (data.type === "player:updated") {
+      }
+
+      // 6. Profile updated
+      else if (data.type === "update_profile" || data.type === "player:updated") {
         const pObj = data.player || data;
         if (!pObj || !pObj.id || pObj.id === myPlayerId) return;
         const p = remotePlayers.get(pObj.id);
@@ -4956,20 +5172,29 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
           p.name = pObj.name || p.name;
           p.gender = pObj.gender || p.gender;
           p.pos = pObj.pos || p.pos;
+          p.lastSeen = Date.now();
           updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
         } else {
           spawnRemotePlayer(pObj);
         }
-        refreshMabarModalPlayerList();
-      } else if (data.type === "player:threw_pebble") {
+        updateOnlineCount();
+      }
+
+      // 7. Threw Pebble at Jamarat
+      else if (data.type === "throw_pebble" || data.type === "player:threw_pebble") {
         spawnRemotePebble(data);
-      } else if (data.type === "chat") {
+      }
+
+      // 8. In-Game Salam / Emote
+      else if (data.type === "chat") {
         toast(`💬 ${data.name || 'Santri'}: "${data.text}"`);
         soundCorrect();
-      } else if (data.type === "player:left") {
-        updateOnlineCount(data.onlineCount);
+      }
+
+      // 9. Player left the game
+      else if (data.type === "player:left") {
         removeRemotePlayer(data.id);
-        refreshMabarModalPlayerList();
+        updateOnlineCount();
       }
     }
 
@@ -5001,9 +5226,11 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         targetZ: pz,
         targetRotY: rot,
         isMoving: false,
-        walkAnimTimer: Math.random() * 5
+        walkAnimTimer: Math.random() * 5,
+        lastSeen: Date.now()
       });
 
+      updateOnlineCount();
       refreshMabarModalPlayerList();
     }
 
@@ -5013,15 +5240,19 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         if (p.group) scene.remove(p.group);
         remotePlayers.delete(id);
       }
+      updateOnlineCount();
       refreshMabarModalPlayerList();
     }
 
     function updateOnlineCount(count) {
+      const actualCount = typeof count === "number" ? Math.max(1, count) : Math.max(1, remotePlayers.size + 1);
       const el = document.getElementById("online-count-val");
       const guruEl = document.getElementById("guru-stat-online");
-      const countVal = Math.max(1, count || (remotePlayers.size + 1));
-      if (el) el.textContent = countVal.toString();
-      if (guruEl) guruEl.textContent = countVal.toString();
+      const modalCount = document.getElementById("mabar-modal-count-txt");
+
+      if (el) el.textContent = actualCount.toString();
+      if (guruEl) guruEl.textContent = actualCount.toString();
+      if (modalCount) modalCount.textContent = `${actualCount} Santri Online`;
     }
 
     function updateRemotePlayers(dt, now) {
@@ -5073,12 +5304,11 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     }
 
     function broadcastLocalMove(isMoving) {
-      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
       const now = performance.now();
       if (now - lastMultiplayerSend < 65) return;
       lastMultiplayerSend = now;
 
-      multiplayerWs.send(JSON.stringify({
+      broadcastMultiplayerPacket({
         type: "move",
         id: myPlayerId,
         name: state.nama || state.username || "Santri",
@@ -5090,19 +5320,18 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         rotY: Number(playerPhysics.rotationY.toFixed(3)),
         isMoving: !!isMoving,
         pos: state.pos
-      }));
+      });
     }
 
     function broadcastProfileUpdate() {
-      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
-      multiplayerWs.send(JSON.stringify({
+      broadcastMultiplayerPacket({
         type: "update_profile",
         id: myPlayerId,
         name: state.nama || state.username,
         gender: state.gender,
         mode: state.mode,
         pos: state.pos
-      }));
+      });
       if (localNametagSprite) {
         updateNametagSprite(localNametagSprite, state.nama || state.username, true, state.gender, state.pos);
       }
@@ -5187,12 +5416,8 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     }
 
     function sendMultiplayerEmote(text) {
-      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) {
-        toast("⚠️ Belum terhubung ke server Mabar!");
-        return;
-      }
       playBeep(580, 80);
-      multiplayerWs.send(JSON.stringify({
+      broadcastMultiplayerPacket({
         type: "chat",
         id: myPlayerId,
         name: state.nama || state.username || "Santri",
@@ -5200,21 +5425,28 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         x: playerPhysics.x,
         y: playerPhysics.y,
         z: playerPhysics.z
-      }));
+      });
       toast(`💬 Anda: "${text}"`);
       soundCorrect();
     }
 
     function broadcastThrowPebble(pillarKey) {
-      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
-      multiplayerWs.send(JSON.stringify({
+      broadcastMultiplayerPacket({
         type: "throw_pebble",
         pillarKey: pillarKey || "AQABAH",
         x: playerPhysics.x,
         y: playerPhysics.y,
         z: playerPhysics.z
-      }));
+      });
     }
+
+    // Leave broadcast on tab close or navigation
+    window.addEventListener("beforeunload", () => {
+      broadcastMultiplayerPacket({ type: "player:left", id: myPlayerId });
+    });
+    window.addEventListener("pagehide", () => {
+      broadcastMultiplayerPacket({ type: "player:left", id: myPlayerId });
+    });
 
     function spawnRemotePebble(data) {
       const pillarCfg = (typeof JAMARAT_PILLARS !== "undefined" && JAMARAT_PILLARS[data.pillarKey])
