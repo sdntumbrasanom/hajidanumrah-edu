@@ -36,8 +36,6 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     import * as THREE from 'three';
     window.THREE = THREE;
   </script>
-  <!-- MQTT Realtime Engine for Universal GitHub Pages & Multi-Device Mabar -->
-  <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.4/dist/mqtt.min.js"></script>
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -2651,7 +2649,7 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
   <!-- MODAL: MABAR MULTIPLAYER (MAIN BARENG SANTRI REALTIME)  -->
   <!-- ======================================================= -->
   <div class="modal-backdrop" id="modal-mabar">
-    <div class="card" style="max-width:560px; text-align:left;">
+    <div class="card" style="max-width:580px; text-align:left;">
       <div class="modal-header-row">
         <h3 class="modal-title-gold" style="font-size:1.3rem;">
           <span>👥</span> <span>Main Bareng (Mabar) Santri</span>
@@ -2661,6 +2659,43 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       <p style="font-size:0.86rem; color:#cbd5e1; margin-bottom:12px; line-height:1.45;">
         Kamu dan teman-teman sekelas terhubung langsung di dunia 3D yang sama secara realtime! Lihat posisi temanmu, beribadah bersama, atau teleport langsung ke lokasinya.
       </p>
+
+      <!-- Room ID & Invitation Link Feature Card -->
+      <div style="background:rgba(15,23,42,0.9); border:1.5px solid var(--color-gold); border-radius:12px; padding:14px; margin-bottom:14px; box-shadow:0 4px 16px rgba(0,0,0,0.35);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.8rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">📍 Ruang Mabar:</span>
+            <span id="mabar-modal-room-id-txt" style="color:var(--color-gold); font-weight:800; font-size:1.02rem; background:rgba(245,197,66,0.18); border:1px solid rgba(245,197,66,0.4); padding:3px 10px; border-radius:8px; letter-spacing:0.5px;">
+              SDN-TUMBRASANOM
+            </span>
+          </div>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn-main clickable" onclick="promptChangeMabarRoom()" style="width:auto; padding:5px 10px; font-size:0.75rem; background:rgba(56,189,248,0.15); border:1px solid #38bdf8; color:#38bdf8; border-radius:6px;" title="Ganti atau buat kode ruang baru">
+              ✏️ Ganti Ruang
+            </button>
+            <button type="button" class="btn-main clickable" onclick="generateNewRandomMabarRoom()" style="width:auto; padding:5px 10px; font-size:0.75rem; background:rgba(168,85,247,0.15); border:1px solid #c084fc; color:#c084fc; border-radius:6px;" title="Buat ruang acak baru">
+              🎲 Ruang Baru
+            </button>
+          </div>
+        </div>
+
+        <!-- Prominent Copy Invitation Link Button -->
+        <button type="button" class="btn-main btn-gold clickable" id="btn-copy-mabar-invite" onclick="copyMabarInviteLink()" style="width:100%; font-size:0.95rem; font-weight:800; padding:12px 14px; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(245,197,66,0.35);">
+          <span style="font-size:1.2rem;">🔗</span>
+          <span>Salin Tautan Undangan (Copy Invitation Link)</span>
+        </button>
+
+        <!-- Direct URL box for display & selection -->
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+          <input type="text" id="mabar-invite-link-input" readonly value="" placeholder="Memuat link undangan..." style="flex:1; padding:8px 12px; background:rgba(10,15,30,0.9); border:1px solid rgba(245,197,66,0.3); border-radius:8px; color:#38bdf8; font-size:0.8rem; font-family:monospace; outline:none;" onclick="this.select()" title="Klik untuk pilih tautan">
+          <button type="button" class="btn-main btn-secondary clickable" onclick="copyMabarInviteLink()" style="width:auto; padding:8px 14px; font-size:0.8rem; border-color:var(--color-gold); color:var(--color-gold);" title="Salin tautan ke clipboard">
+            <span>📋 Salin</span>
+          </button>
+        </div>
+        <div style="font-size:0.72rem; color:#94a3b8; margin-top:6px; display:flex; align-items:center; gap:4px;">
+          <span>💡</span> <span>Teman yang membuka link undangan ini akan langsung masuk ke sesi 3D di ruang yang sama!</span>
+        </div>
+      </div>
 
       <!-- Quick Emotes / Salam Row -->
       <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(245,197,66,0.25); border-radius:12px; padding:12px; margin-bottom:14px;">
@@ -3898,13 +3933,27 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     let worldLabelsElements = {};
     let remotePlayers = new Map();
     let multiplayerWs = null;
-    let multiplayerMqtt = null;
-    let multiplayerBroadcastChannel = null;
     let myPlayerId = null;
+    try { myPlayerId = sessionStorage.getItem("ibq_session_player_id"); } catch (e) {}
+    if (!myPlayerId) {
+      myPlayerId = "santri_" + Math.random().toString(36).substring(2, 9);
+      try { sessionStorage.setItem("ibq_session_player_id", myPlayerId); } catch (e) {}
+    }
+
+    let currentRoomId = "SDN-TUMBRASANOM";
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const rParam = urlParams.get("room") || urlParams.get("roomId");
+      if (rParam && rParam.trim()) {
+        currentRoomId = rParam.trim().toUpperCase();
+      } else {
+        const savedRoom = localStorage.getItem("ibq_mabar_room");
+        if (savedRoom && savedRoom.trim()) currentRoomId = savedRoom.trim().toUpperCase();
+      }
+    } catch (e) {}
+
     let lastMultiplayerSend = 0;
-    const MABAR_TOPIC = "sdntumbrasanom/hajidanumrah/mabar/v1";
-    const MQTT_BROKER_URL = "wss://broker.emqx.io:8084/mqtt";
-    const MQTT_BACKUP_BROKER_URL = "wss://broker.hivemq.com:8884/mqtt";
+    let multiplayerHeartbeatTimer = null;
 
     const playerPhysics = {
       x: -60, y: 0, z: 50,
@@ -4855,242 +4904,32 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       }
     }
 
-    /* ===== 🌐 MULTIPLAYER REALTIME ENGINE (UNIVERSAL GITHUB PAGES & MULTI-DEVICE) ===== */
-    let heartbeatTimer = null;
-
+    /* ===== 🌐 MULTIPLAYER REALTIME ENGINE (WEBSOCKET /ws) ===== */
     function initMultiplayer() {
-      // 1. Ensure Persistent Client ID
-      if (!myPlayerId) {
-        let savedId = null;
-        try { savedId = localStorage.getItem("ibq_client_id"); } catch (e) {}
-        if (!savedId) {
-          savedId = "santri_" + Math.random().toString(36).substring(2, 9);
-          try { localStorage.setItem("ibq_client_id", savedId); } catch (e) {}
+      if (multiplayerWs) {
+        if (multiplayerWs.readyState === WebSocket.OPEN) {
+          broadcastProfileUpdate();
+          return;
         }
-        myPlayerId = savedId;
-      }
-
-      // 2. Initialize Local Same-Browser Cross-Tab Channel (0ms latency)
-      if (!multiplayerBroadcastChannel && typeof BroadcastChannel !== "undefined") {
-        try {
-          multiplayerBroadcastChannel = new BroadcastChannel("ibadahquest_sdntumbrasanom_mabar");
-          multiplayerBroadcastChannel.onmessage = (event) => {
-            try {
-              const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-              handleMultiplayerMessage(data);
-            } catch (e) {}
-          };
-        } catch (e) {}
-      }
-
-      // 3. Connect to Global Free Realtime MQTT WebSocket Broker (Universal for GitHub Pages & All Devices)
-      if (typeof window.mqtt !== "undefined" && (!multiplayerMqtt || !multiplayerMqtt.connected)) {
-        try {
-          const willPayload = JSON.stringify({ type: "player:left", id: myPlayerId });
-          multiplayerMqtt = window.mqtt.connect(MQTT_BROKER_URL, {
-            keepalive: 30,
-            clean: true,
-            clientId: myPlayerId + "_" + Math.random().toString(36).substring(2, 6),
-            reconnectPeriod: 3000,
-            connectTimeout: 8000,
-            will: {
-              topic: MABAR_TOPIC,
-              payload: willPayload,
-              qos: 0,
-              retain: false
-            }
-          });
-
-          multiplayerMqtt.on("connect", () => {
-            multiplayerMqtt.subscribe(MABAR_TOPIC, { qos: 0 }, (err) => {
-              if (!err) {
-                // Announce self presence to all students
-                broadcastMultiplayerPacket({
-                  type: "join",
-                  id: myPlayerId,
-                  name: state.nama || state.username || "Santri",
-                  gender: state.gender || "L",
-                  mode: state.mode || "UMRAH",
-                  pos: state.pos || 1,
-                  x: Number(playerPhysics.x.toFixed(2)),
-                  y: Number(playerPhysics.y.toFixed(2)),
-                  z: Number(playerPhysics.z.toFixed(2)),
-                  rotationY: Number(playerPhysics.rotationY.toFixed(3)),
-                  rotY: Number(playerPhysics.rotationY.toFixed(3))
-                });
-              }
-            });
-          });
-
-          multiplayerMqtt.on("message", (topic, message) => {
-            if (topic === MABAR_TOPIC) {
-              try {
-                const data = JSON.parse(message.toString());
-                handleMultiplayerMessage(data);
-              } catch (e) {}
-            }
-          });
-
-          multiplayerMqtt.on("error", () => {
-            // Silently try backup broker if primary fails
-            if (multiplayerMqtt && !multiplayerMqtt.connected) {
-              try {
-                multiplayerMqtt.end(true);
-                multiplayerMqtt = window.mqtt.connect(MQTT_BACKUP_BROKER_URL, {
-                  keepalive: 30,
-                  clientId: myPlayerId + "_" + Math.random().toString(36).substring(2, 6),
-                  reconnectPeriod: 4000
-                });
-              } catch (e) {}
-            }
-          });
-        } catch (e) {}
-      }
-
-      // 4. Connect to Local Node.js /ws Server (if running on localhost)
-      const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-      if (isLocalhost && !multiplayerWs) {
-        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const wsUrl = `${protocol}//${window.location.host}/ws`;
-
-        try {
-          multiplayerWs = new WebSocket(wsUrl);
-
-          multiplayerWs.onopen = () => {
-            multiplayerWs.send(JSON.stringify({
-              type: "join",
-              id: myPlayerId,
-              name: state.nama || state.username || "Santri",
-              gender: state.gender || "L",
-              mode: state.mode || "UMRAH",
-              pos: state.pos || 1,
-              x: Number(playerPhysics.x.toFixed(2)),
-              y: Number(playerPhysics.y.toFixed(2)),
-              z: Number(playerPhysics.z.toFixed(2)),
-              rotationY: Number(playerPhysics.rotationY.toFixed(3)),
-              rotY: Number(playerPhysics.rotationY.toFixed(3))
-            }));
-          };
-
-          multiplayerWs.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-              handleMultiplayerMessage(data);
-            } catch (e) {}
-          };
-
-          multiplayerWs.onclose = () => {
-            multiplayerWs = null;
-          };
-
-          multiplayerWs.onerror = () => {};
-        } catch (e) {}
-      }
-
-      // 5. Setup Heartbeat and Stale Presence Cleanup Timer
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
-      heartbeatTimer = setInterval(() => {
-        // Send heartbeat to all peers
-        broadcastMultiplayerPacket({
-          type: "heartbeat",
-          id: myPlayerId,
-          name: state.nama || state.username || "Santri",
-          gender: state.gender || "L",
-          mode: state.mode || "UMRAH",
-          pos: state.pos || 1,
-          x: Number(playerPhysics.x.toFixed(2)),
-          y: Number(playerPhysics.y.toFixed(2)),
-          z: Number(playerPhysics.z.toFixed(2)),
-          rotationY: Number(playerPhysics.rotationY.toFixed(3)),
-          rotY: Number(playerPhysics.rotationY.toFixed(3)),
-          isMoving: !!playerPhysics.isMoving
-        });
-
-        // Auto-remove inactive players that haven't sent heartbeats in 14s
-        const now = Date.now();
-        remotePlayers.forEach((p, id) => {
-          if (p.lastSeen && now - p.lastSeen > 14000) {
-            removeRemotePlayer(id);
-          }
-        });
-
-        updateOnlineCount();
-      }, 3500);
-
-      // Initial Join Broadcast
-      broadcastMultiplayerPacket({
-        type: "join",
-        id: myPlayerId,
-        name: state.nama || state.username || "Santri",
-        gender: state.gender || "L",
-        mode: state.mode || "UMRAH",
-        pos: state.pos || 1,
-        x: Number(playerPhysics.x.toFixed(2)),
-        y: Number(playerPhysics.y.toFixed(2)),
-        z: Number(playerPhysics.z.toFixed(2)),
-        rotationY: Number(playerPhysics.rotationY.toFixed(3)),
-        rotY: Number(playerPhysics.rotationY.toFixed(3))
-      });
-
-      updateOnlineCount();
-    }
-
-    // Unified broadcast function across all active transports
-    function broadcastMultiplayerPacket(packet) {
-      if (!packet) return;
-      packet.senderId = myPlayerId;
-      if (!packet.id) packet.id = myPlayerId;
-      packet.timestamp = Date.now();
-
-      const raw = JSON.stringify(packet);
-
-      // Transport A: BroadcastChannel (same browser tabs)
-      if (multiplayerBroadcastChannel) {
-        try { multiplayerBroadcastChannel.postMessage(raw); } catch (e) {}
-      }
-
-      // Transport B: Local Node.js WebSocket (localhost)
-      if (multiplayerWs && multiplayerWs.readyState === WebSocket.OPEN) {
-        try { multiplayerWs.send(raw); } catch (e) {}
-      }
-
-      // Transport C: Public Global MQTT Broker (GitHub Pages & all remote devices)
-      if (multiplayerMqtt && multiplayerMqtt.connected) {
-        try { multiplayerMqtt.publish(MABAR_TOPIC, raw, { qos: 0 }); } catch (e) {}
-      }
-    }
-
-    function handleMultiplayerMessage(data) {
-      if (!data || !data.type) return;
-
-      // Filter out self-sent messages and echoes
-      if (data.senderId === myPlayerId || data.id === myPlayerId) return;
-
-      // 1. Initial player list from centralized WS server (if applicable)
-      if (data.type === "init") {
-        if (data.yourId) myPlayerId = data.yourId;
-        if (Array.isArray(data.players)) {
-          data.players.forEach(p => {
-            if (p && p.id && p.id !== myPlayerId) {
-              spawnRemotePlayer(p);
-            }
-          });
+        if (multiplayerWs.readyState === WebSocket.CONNECTING) {
+          return;
         }
-        updateOnlineCount();
+        try { multiplayerWs.close(); } catch (e) {}
       }
 
-      // 2. New player joined -> spawn them and reply with our state
-      else if (data.type === "join") {
-        const pObj = data.player || data;
-        if (pObj && pObj.id && pObj.id !== myPlayerId) {
-          spawnRemotePlayer(pObj);
-          toast(`👋 Santri ${pObj.name || "Santri"} bergabung ke dalam Tanah Suci!`);
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
 
-          // Reply back with our current state so the newcomer discovers us immediately
-          broadcastMultiplayerPacket({
-            type: "sync_reply",
-            targetId: pObj.id,
+      try {
+        multiplayerWs = new WebSocket(wsUrl);
+
+        multiplayerWs.onopen = () => {
+          console.info("[Mabar] WebSocket terhubung:", wsUrl, "Room:", currentRoomId);
+          // Join hanya setelah socket benar-benar terbuka
+          multiplayerWs.send(JSON.stringify({
+            type: "join",
             id: myPlayerId,
+            roomId: currentRoomId,
             name: state.nama || state.username || "Santri",
             gender: state.gender || "L",
             mode: state.mode || "UMRAH",
@@ -5098,54 +4937,83 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
             x: Number(playerPhysics.x.toFixed(2)),
             y: Number(playerPhysics.y.toFixed(2)),
             z: Number(playerPhysics.z.toFixed(2)),
-            rotationY: Number(playerPhysics.rotationY.toFixed(3)),
-            rotY: Number(playerPhysics.rotationY.toFixed(3))
+            rotationY: Number(playerPhysics.rotationY.toFixed(3))
+          }));
+
+          // Heartbeat menjaga pemain tetap online meskipun sedang diam
+          if (multiplayerHeartbeatTimer) clearInterval(multiplayerHeartbeatTimer);
+          multiplayerHeartbeatTimer = setInterval(() => {
+            if (multiplayerWs && multiplayerWs.readyState === WebSocket.OPEN) {
+              multiplayerWs.send(JSON.stringify({ type: "ping" }));
+            }
+          }, 12000);
+        };
+
+        multiplayerWs.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleMultiplayerMessage(data);
+          } catch (e) {}
+        };
+
+        multiplayerWs.onclose = () => {
+          if (multiplayerHeartbeatTimer) {
+            clearInterval(multiplayerHeartbeatTimer);
+            multiplayerHeartbeatTimer = null;
+          }
+          console.warn("[Mabar] Koneksi terputus. Mencoba menyambung kembali...");
+          setTimeout(() => {
+            if (!multiplayerWs || multiplayerWs.readyState === WebSocket.CLOSED) initMultiplayer();
+          }, 2500);
+        };
+
+        multiplayerWs.onerror = (err) => {
+          console.error("[Mabar] Gagal membuka koneksi WebSocket.", err);
+        };
+      } catch (e) {}
+    }
+
+    function handleMultiplayerMessage(data) {
+      if (!data || !data.type) return;
+
+      if (data.type === "init") {
+        myPlayerId = data.yourId || myPlayerId;
+        if (data.roomId) currentRoomId = data.roomId;
+        updateMabarRoomUI();
+        updateOnlineCount(data.onlineCount || (Array.isArray(data.players) ? data.players.length : 1));
+
+        // Bersihkan remote player lama yang tidak ada dalam daftar aktif ruang saat ini
+        if (Array.isArray(data.players)) {
+          const incomingIds = new Set(data.players.map(p => p.id));
+          remotePlayers.forEach((rp, id) => {
+            if (!incomingIds.has(id)) {
+              if (rp.group) scene.remove(rp.group);
+              remotePlayers.delete(id);
+            }
+          });
+          data.players.forEach(p => {
+            if (p && p.id && p.id !== myPlayerId) {
+              spawnRemotePlayer(p);
+            }
           });
         }
-        updateOnlineCount();
-      }
-
-      // 3. Response to our join message
-      else if (data.type === "sync_reply") {
-        if (data.targetId && data.targetId !== myPlayerId) return;
-        if (data.id && data.id !== myPlayerId) {
-          spawnRemotePlayer(data);
+        refreshMabarModalPlayerList();
+      } else if (data.type === "player:joined") {
+        updateOnlineCount(data.onlineCount);
+        if (data.player && data.player.id && data.player.id !== myPlayerId) {
+          spawnRemotePlayer(data.player);
+          toast(`👋 Santri ${data.player.name || "Santri"} bergabung ke dalam Tanah Suci!`);
         }
-        updateOnlineCount();
-      }
+        refreshMabarModalPlayerList();
+      } else if (data.type === "player:moved") {
+        if (myPlayerId && data.id === myPlayerId) return;
 
-      // 4. Heartbeat packet
-      else if (data.type === "heartbeat") {
         let p = remotePlayers.get(data.id);
         if (!p) {
           spawnRemotePlayer(data);
           p = remotePlayers.get(data.id);
         }
         if (p) {
-          p.lastSeen = Date.now();
-          if (typeof data.x === "number" && !isNaN(data.x)) p.targetX = data.x;
-          if (typeof data.y === "number" && !isNaN(data.y)) p.targetY = data.y;
-          if (typeof data.z === "number" && !isNaN(data.z)) p.targetZ = data.z;
-          const r = typeof data.rotationY === "number" ? data.rotationY : (typeof data.rotY === "number" ? data.rotY : null);
-          if (r !== null && !isNaN(r)) p.targetRotY = r;
-          if (data.name && data.name !== p.name) p.name = data.name;
-          if (data.pos && data.pos !== p.pos) {
-            p.pos = data.pos;
-            updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
-          }
-        }
-        updateOnlineCount();
-      }
-
-      // 5. Movement packet
-      else if (data.type === "move" || data.type === "player:moved") {
-        let p = remotePlayers.get(data.id);
-        if (!p) {
-          spawnRemotePlayer(data);
-          p = remotePlayers.get(data.id);
-        }
-        if (p) {
-          p.lastSeen = Date.now();
           if (typeof data.x === "number" && !isNaN(data.x)) p.targetX = data.x;
           if (typeof data.y === "number" && !isNaN(data.y)) p.targetY = data.y;
           if (typeof data.z === "number" && !isNaN(data.z)) p.targetZ = data.z;
@@ -5161,40 +5029,44 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
             updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
           }
         }
-      }
-
-      // 6. Profile updated
-      else if (data.type === "update_profile" || data.type === "player:updated") {
+      } else if (data.type === "player:updated") {
         const pObj = data.player || data;
         if (!pObj || !pObj.id || pObj.id === myPlayerId) return;
         const p = remotePlayers.get(pObj.id);
         if (p) {
           p.name = pObj.name || p.name;
+          const oldGender = p.gender;
           p.gender = pObj.gender || p.gender;
           p.pos = pObj.pos || p.pos;
-          p.lastSeen = Date.now();
-          updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
+
+          // Jika santri mengganti busana putra/putri, perbarui 3D modelnya
+          if (oldGender !== p.gender && p.group) {
+            const curPos = p.group.position.clone();
+            const curRotY = p.group.rotation.y;
+            scene.remove(p.group);
+            const avatar = createRobloxAvatar(p.gender, p.name, false, p.pos);
+            avatar.group.position.copy(curPos);
+            avatar.group.rotation.y = curRotY;
+            scene.add(avatar.group);
+            p.group = avatar.group;
+            p.limbs = avatar.limbs;
+            p.nametagSprite = avatar.nametagSprite;
+          } else {
+            updateNametagSprite(p.nametagSprite, p.name, false, p.gender, p.pos);
+          }
         } else {
           spawnRemotePlayer(pObj);
         }
-        updateOnlineCount();
-      }
-
-      // 7. Threw Pebble at Jamarat
-      else if (data.type === "throw_pebble" || data.type === "player:threw_pebble") {
+        refreshMabarModalPlayerList();
+      } else if (data.type === "player:threw_pebble") {
         spawnRemotePebble(data);
-      }
-
-      // 8. In-Game Salam / Emote
-      else if (data.type === "chat") {
+      } else if (data.type === "chat") {
         toast(`💬 ${data.name || 'Santri'}: "${data.text}"`);
         soundCorrect();
-      }
-
-      // 9. Player left the game
-      else if (data.type === "player:left") {
+      } else if (data.type === "player:left") {
+        updateOnlineCount(data.onlineCount);
         removeRemotePlayer(data.id);
-        updateOnlineCount();
+        refreshMabarModalPlayerList();
       }
     }
 
@@ -5226,11 +5098,9 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         targetZ: pz,
         targetRotY: rot,
         isMoving: false,
-        walkAnimTimer: Math.random() * 5,
-        lastSeen: Date.now()
+        walkAnimTimer: Math.random() * 5
       });
 
-      updateOnlineCount();
       refreshMabarModalPlayerList();
     }
 
@@ -5240,19 +5110,15 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         if (p.group) scene.remove(p.group);
         remotePlayers.delete(id);
       }
-      updateOnlineCount();
       refreshMabarModalPlayerList();
     }
 
     function updateOnlineCount(count) {
-      const actualCount = typeof count === "number" ? Math.max(1, count) : Math.max(1, remotePlayers.size + 1);
       const el = document.getElementById("online-count-val");
       const guruEl = document.getElementById("guru-stat-online");
-      const modalCount = document.getElementById("mabar-modal-count-txt");
-
-      if (el) el.textContent = actualCount.toString();
-      if (guruEl) guruEl.textContent = actualCount.toString();
-      if (modalCount) modalCount.textContent = `${actualCount} Santri Online`;
+      const countVal = Math.max(1, count || (remotePlayers.size + 1));
+      if (el) el.textContent = countVal.toString();
+      if (guruEl) guruEl.textContent = countVal.toString();
     }
 
     function updateRemotePlayers(dt, now) {
@@ -5304,13 +5170,15 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
     }
 
     function broadcastLocalMove(isMoving) {
+      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
       const now = performance.now();
       if (now - lastMultiplayerSend < 65) return;
       lastMultiplayerSend = now;
 
-      broadcastMultiplayerPacket({
+      multiplayerWs.send(JSON.stringify({
         type: "move",
         id: myPlayerId,
+        roomId: currentRoomId,
         name: state.nama || state.username || "Santri",
         gender: state.gender || "L",
         x: Number(playerPhysics.x.toFixed(2)),
@@ -5320,25 +5188,149 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
         rotY: Number(playerPhysics.rotationY.toFixed(3)),
         isMoving: !!isMoving,
         pos: state.pos
-      });
+      }));
     }
 
     function broadcastProfileUpdate() {
-      broadcastMultiplayerPacket({
+      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
+      multiplayerWs.send(JSON.stringify({
         type: "update_profile",
         id: myPlayerId,
+        roomId: currentRoomId,
         name: state.nama || state.username,
         gender: state.gender,
         mode: state.mode,
         pos: state.pos
-      });
+      }));
       if (localNametagSprite) {
         updateNametagSprite(localNametagSprite, state.nama || state.username, true, state.gender, state.pos);
       }
     }
 
+    /* ===== 🔗 MABAR INVITATION LINK & ROOM CONTROLS ===== */
+    function generateMabarInviteLink() {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set("room", currentRoomId);
+        return url.toString();
+      } catch (e) {
+        return `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(currentRoomId)}`;
+      }
+    }
+
+    function updateMabarRoomUI() {
+      const roomBadge = document.getElementById("mabar-modal-room-id-txt");
+      if (roomBadge) roomBadge.textContent = currentRoomId;
+
+      const linkInput = document.getElementById("mabar-invite-link-input");
+      if (linkInput) linkInput.value = generateMabarInviteLink();
+    }
+
+    function copyMabarInviteLink() {
+      const inviteUrl = generateMabarInviteLink();
+
+      const onCopySuccess = () => {
+        soundCorrect();
+        // Toast notifikasi sukses 'Invite Friend' / Undangan Teman sesuai instruksi
+        toast(`🎉 Undangan Teman (Invite Friend): Tautan Mabar ruang "${currentRoomId}" berhasil disalin! Bagikan ke teman sekelas.`);
+
+        const copyBtn = document.getElementById("btn-copy-mabar-invite");
+        if (copyBtn) {
+          const originalContent = copyBtn.innerHTML;
+          copyBtn.innerHTML = `<span>✅</span> <span>Tautan Mabar Berhasil Disalin!</span>`;
+          copyBtn.style.background = "#10b981";
+          copyBtn.style.borderColor = "#6ee7b7";
+          setTimeout(() => {
+            if (copyBtn) {
+              copyBtn.innerHTML = originalContent;
+              copyBtn.style.background = "";
+              copyBtn.style.borderColor = "";
+            }
+          }, 2400);
+        }
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(inviteUrl).then(onCopySuccess).catch(() => {
+          fallbackCopyText(inviteUrl);
+          onCopySuccess();
+        });
+      } else {
+        fallbackCopyText(inviteUrl);
+        onCopySuccess();
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const inp = document.getElementById("mabar-invite-link-input");
+      if (inp) {
+        inp.value = text;
+        inp.focus();
+        inp.select();
+        try { document.execCommand("copy"); } catch (e) {}
+      }
+    }
+
+    function switchMabarRoom(newRoomCode) {
+      if (!newRoomCode) return;
+      const cleanRoom = newRoomCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+      if (cleanRoom.length < 2) {
+        toast("⚠️ Kode ruang minimal 2 karakter!");
+        return;
+      }
+
+      currentRoomId = cleanRoom;
+      try {
+        localStorage.setItem("ibq_mabar_room", currentRoomId);
+        const url = new URL(window.location.href);
+        url.searchParams.set("room", currentRoomId);
+        window.history.replaceState({}, "", url.toString());
+      } catch (e) {}
+
+      // Bersihkan remote player lama karena pindah ruang
+      remotePlayers.forEach(p => {
+        if (p.group) scene.remove(p.group);
+      });
+      remotePlayers.clear();
+
+      updateMabarRoomUI();
+      refreshMabarModalPlayerList();
+
+      if (multiplayerWs && multiplayerWs.readyState === WebSocket.OPEN) {
+        multiplayerWs.send(JSON.stringify({
+          type: "update_profile",
+          id: myPlayerId,
+          roomId: currentRoomId,
+          name: state.nama || state.username,
+          gender: state.gender,
+          mode: state.mode,
+          pos: state.pos
+        }));
+      }
+
+      soundCorrect();
+      toast(`🚪 Berhasil berpindah ke Ruang Mabar: ${currentRoomId}!`);
+    }
+
+    function promptChangeMabarRoom() {
+      playBeep(480, 80);
+      const input = prompt("Masukkan Kode Ruang Mabar (contoh: KELAS-6A, GRUP-1, dsb):", currentRoomId);
+      if (input && input.trim()) {
+        switchMabarRoom(input);
+      }
+    }
+
+    function generateNewRandomMabarRoom() {
+      playBeep(520, 80);
+      const randNum = Math.floor(1000 + Math.random() * 9000);
+      const newRoom = "MABAR-" + randNum;
+      switchMabarRoom(newRoom);
+      copyMabarInviteLink();
+    }
+
     function openMabarModal() {
       playBeep(480, 80);
+      updateMabarRoomUI();
       refreshMabarModalPlayerList();
       openModal("modal-mabar");
     }
@@ -5378,19 +5370,20 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       if (remotePlayers.size === 0) {
         const emptyDiv = document.createElement("div");
         emptyDiv.style.cssText = "text-align:center; padding:18px; color:#94a3b8; font-size:0.85rem; background:rgba(15,23,42,0.6); border-radius:10px; border:1px dashed rgba(255,255,255,0.15);";
-        emptyDiv.innerHTML = "⏳ Belum ada teman lain yang bergabung. Bagikan tautan web ini ke teman sekelas untuk mabar bersama!";
+        emptyDiv.innerHTML = "⏳ Belum ada teman lain di ruang ini. Klik <b>'Salin Tautan Undangan'</b> di atas dan kirimkan ke teman sekelas untuk mabar bersama!";
         listEl.appendChild(emptyDiv);
       } else {
         remotePlayers.forEach(rp => {
           const item = document.createElement("div");
           item.style.cssText = "display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px 14px;";
           const avatar = rp.gender === "P" ? "🧕" : "👦";
+          const dist = Math.hypot(rp.targetX - playerPhysics.x, rp.targetZ - playerPhysics.z);
           item.innerHTML = `
             <div style="display:flex; align-items:center; gap:10px;">
               <span style="font-size:1.6rem;">${avatar}</span>
               <div>
                 <div style="font-weight:800; font-size:0.92rem; color:#fff;">${rp.name || "Santri Teman"}</div>
-                <div style="font-size:0.75rem; color:#38bdf8;">Sedang di POS ${rp.pos || 1}</div>
+                <div style="font-size:0.75rem; color:#38bdf8;">POS ${rp.pos || 1} · Jarak ~${Math.round(dist)}m</div>
               </div>
             </div>
             <button type="button" class="btn-main clickable" onclick="teleportToRemotePlayer('${rp.id}')" style="width:auto; padding:6px 14px; font-size:0.78rem; background:rgba(56,189,248,0.2); border:1px solid #38bdf8; color:#38bdf8;">
@@ -5415,38 +5408,16 @@ IBADAH QUEST 3D — Petualangan Manasik Haji & Umrah Realistis (Arab Saudi)
       toast(`⚡ Berhasil teleport mendekati teman: ${rp.name}!`);
     }
 
-    function sendMultiplayerEmote(text) {
-      playBeep(580, 80);
-      broadcastMultiplayerPacket({
-        type: "chat",
-        id: myPlayerId,
-        name: state.nama || state.username || "Santri",
-        text: text,
-        x: playerPhysics.x,
-        y: playerPhysics.y,
-        z: playerPhysics.z
-      });
-      toast(`💬 Anda: "${text}"`);
-      soundCorrect();
-    }
-
     function broadcastThrowPebble(pillarKey) {
-      broadcastMultiplayerPacket({
+      if (!multiplayerWs || multiplayerWs.readyState !== WebSocket.OPEN) return;
+      multiplayerWs.send(JSON.stringify({
         type: "throw_pebble",
         pillarKey: pillarKey || "AQABAH",
         x: playerPhysics.x,
         y: playerPhysics.y,
         z: playerPhysics.z
-      });
+      }));
     }
-
-    // Leave broadcast on tab close or navigation
-    window.addEventListener("beforeunload", () => {
-      broadcastMultiplayerPacket({ type: "player:left", id: myPlayerId });
-    });
-    window.addEventListener("pagehide", () => {
-      broadcastMultiplayerPacket({ type: "player:left", id: myPlayerId });
-    });
 
     function spawnRemotePebble(data) {
       const pillarCfg = (typeof JAMARAT_PILLARS !== "undefined" && JAMARAT_PILLARS[data.pillarKey])
@@ -8836,77 +8807,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       }
     }
 
-    /* ===== 👥 MABAR (MAIN BARENG SANTRI REALTIME) ===== */
-    function openMabarModal() {
-      playBeep(480, 80);
-      const listEl = document.getElementById("mabar-players-list");
-      const countEl = document.getElementById("mabar-modal-count-txt");
-      if (!listEl) return;
 
-      listEl.innerHTML = "";
-      const totalOnline = remotePlayers.size + 1;
-      if (countEl) countEl.textContent = `${totalOnline} Santri Sedang Online`;
-
-      // 1. Current local player
-      const meRow = document.createElement("div");
-      meRow.style.cssText = "background:rgba(30,41,59,0.85); border:1.5px solid var(--color-gold); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;";
-      const curPosData = getCurrentPosData();
-      meRow.innerHTML = `
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.8rem;">${state.gender === "L" ? "👦" : "🧕"}</span>
-          <div>
-            <div style="font-weight:800; font-size:0.92rem; color:#fff;">${state.nama || state.username} <span style="font-size:0.72rem; color:var(--color-gold); font-weight:700;">(Anda)</span></div>
-            <div style="font-size:0.75rem; color:#94a3b8;">${state.mode} · ${curPosData ? curPosData.title : 'Pos ' + state.pos}</div>
-          </div>
-        </div>
-        <span style="font-size:0.75rem; background:rgba(16,185,129,0.2); color:#10b981; border:1px solid #10b981; padding:3px 8px; border-radius:999px; font-weight:700;">🟢 Online</span>
-      `;
-      listEl.appendChild(meRow);
-
-      // 2. Remote classmates
-      if (remotePlayers.size === 0) {
-        const emptyRow = document.createElement("div");
-        emptyRow.style.cssText = "text-align:center; padding:18px; color:#94a3b8; font-size:0.84rem;";
-        emptyRow.innerHTML = "Belum ada teman lain yang online saat ini. Buka aplikasi di perangkat lain atau bagikan tautan ini ke teman sekelas untuk mabar!";
-        listEl.appendChild(emptyRow);
-      } else {
-        remotePlayers.forEach(p => {
-          const row = document.createElement("div");
-          row.style.cssText = "background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center;";
-          const posNum = p.pos || 1;
-          const dist = Math.hypot(p.targetX - playerPhysics.x, p.targetZ - playerPhysics.z);
-          row.innerHTML = `
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:1.8rem;">${p.gender === "L" ? "👦" : "🧕"}</span>
-              <div>
-                <div style="font-weight:800; font-size:0.92rem; color:#fff;">${p.name || "Santri"}</div>
-                <div style="font-size:0.75rem; color:#38bdf8;">Pos ${posNum} · Jarak ~${Math.round(dist)}m</div>
-              </div>
-            </div>
-            <button type="button" class="btn-main clickable" onclick="teleportToMabarPlayer('${p.id}')" style="width:auto; padding:6px 12px; font-size:0.78rem; background:linear-gradient(135deg, #10b981, #059669); color:#fff; border-radius:8px;">
-              🚀 Samperin
-            </button>
-          `;
-          listEl.appendChild(row);
-        });
-      }
-
-      openModal("modal-mabar");
-    }
-
-    function teleportToMabarPlayer(id) {
-      const p = remotePlayers.get(id);
-      if (p) {
-        playerPhysics.x = p.targetX + (Math.random() - 0.5) * 2;
-        playerPhysics.z = p.targetZ + (Math.random() - 0.5) * 2;
-        playerPhysics.y = 1;
-        playerPhysics.vx = 0;
-        playerPhysics.vz = 0;
-        closeModal("modal-mabar");
-        soundCorrect();
-        toast(`🚀 Menghampiri santri ${p.name}! Ayo beribadah bareng.`);
-      }
-    }
 
     function sendMultiplayerEmote(text) {
       toast(`💬 Anda: ${text}`);
@@ -9222,6 +9123,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
 
       buildRobloxCharacter();
       updateHUD();
+      broadcastProfileUpdate();
       closeModal("modal-profile");
       toast(`Karakter ${val} tersimpan.`);
     }
@@ -9572,6 +9474,7 @@ _Dikirim melalui Game Edukasi Ibadah Quest (Petualangan Haji & Umrah 3D)_`;
       initTalbiyahAudioEngine();
       updateTalbiyahProximity();
       initMultiplayer(); // Start Mabar realtime connection!
+      broadcastProfileUpdate();
 
       teleportTo("MIQAT");
       soundFinish();

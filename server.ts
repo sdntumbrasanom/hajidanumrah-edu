@@ -106,6 +106,7 @@ app.delete('/api/submissions', (req, res) => {
 // ==========================================
 interface PlayerState {
   id: string;
+  roomId: string;
   name: string;
   gender: string;
   mode: string;
@@ -120,18 +121,42 @@ interface PlayerState {
 
 const connectedPlayers = new Map<string, PlayerState>();
 const socketToPlayerId = new Map<WebSocket, string>();
+const socketToRoomId = new Map<WebSocket, string>();
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-function broadcast(msg: object, excludeWs?: WebSocket) {
+function getRoomPlayers(roomId: string): PlayerState[] {
+  const normRoom = (roomId || 'SDN-TUMBRASANOM').trim().toUpperCase();
+  return Array.from(connectedPlayers.values()).filter(p => (p.roomId || 'SDN-TUMBRASANOM') === normRoom);
+}
+
+function broadcast(msg: object, excludeWs?: WebSocket, targetRoomId?: string) {
   const raw = JSON.stringify(msg);
+  const normTargetRoom = targetRoomId ? targetRoomId.trim().toUpperCase() : null;
+
   wss.clients.forEach(client => {
     if (client.readyState === WebSocket.OPEN && client !== excludeWs) {
+      if (normTargetRoom) {
+        const clientRoom = (socketToRoomId.get(client) || 'SDN-TUMBRASANOM').trim().toUpperCase();
+        if (clientRoom !== normTargetRoom) return;
+      }
       try {
         client.send(raw);
       } catch (err) {}
     }
   });
+}
+
+function pruneInactivePlayers(maxAgeMs = 35000) {
+  const now = Date.now();
+  for (const [id, player] of connectedPlayers.entries()) {
+    if (now - player.lastSeen > maxAgeMs) {
+      connectedPlayers.delete(id);
+      const room = player.roomId || 'SDN-TUMBRASANOM';
+      const remainingCount = getRoomPlayers(room).length;
+      broadcast({ type: 'player:left', id, roomId: room, onlineCount: remainingCount }, undefined, room);
+    }
+  }
 }
 
 wss.on('connection', (ws) => {
@@ -141,9 +166,15 @@ wss.on('connection', (ws) => {
 
       if (msg.type === 'join') {
         const id = msg.id || 'player_' + Math.random().toString(36).substring(2, 9);
+        const roomId = (msg.roomId || 'SDN-TUMBRASANOM').trim().toUpperCase();
         const rotY = typeof msg.rotationY === 'number' ? msg.rotationY : (typeof msg.rotY === 'number' ? msg.rotY : 0);
+
+        // Prune any stale players before adding
+        pruneInactivePlayers(30000);
+
         const player: PlayerState = {
           id,
+          roomId,
           name: msg.name || 'Santri',
           gender: msg.gender || 'L',
           mode: msg.mode || 'UMRAH',
@@ -158,21 +189,26 @@ wss.on('connection', (ws) => {
 
         connectedPlayers.set(id, player);
         socketToPlayerId.set(ws, id);
+        socketToRoomId.set(ws, roomId);
 
-        // Send self state and list of all currently active players
+        const roomPlayers = getRoomPlayers(roomId);
+
+        // Send self state and list of all currently active players in this specific room
         ws.send(JSON.stringify({
           type: 'init',
           yourId: id,
-          onlineCount: connectedPlayers.size,
-          players: Array.from(connectedPlayers.values())
+          roomId,
+          onlineCount: roomPlayers.length,
+          players: roomPlayers
         }));
 
-        // Broadcast to other players that new student joined
+        // Broadcast to other players in the same room that new student joined
         broadcast({
           type: 'player:joined',
-          onlineCount: connectedPlayers.size,
+          roomId,
+          onlineCount: roomPlayers.length,
           player
-        }, ws);
+        }, ws, roomId);
       }
 
       else if (msg.type === 'move') {
@@ -194,9 +230,11 @@ wss.on('connection', (ws) => {
           if (msg.gender) p.gender = msg.gender;
           p.lastSeen = Date.now();
 
+          const room = p.roomId || 'SDN-TUMBRASANOM';
           broadcast({
             type: 'player:moved',
             id,
+            roomId: room,
             name: p.name,
             gender: p.gender,
             pos: p.pos,
@@ -207,7 +245,7 @@ wss.on('connection', (ws) => {
             rotY: p.rotationY,
             isMoving: !!(p as any).isMoving,
             anim: p.anim
-          }, ws);
+          }, ws, room);
         }
       }
 
@@ -216,44 +254,88 @@ wss.on('connection', (ws) => {
         if (!id) return;
         const p = connectedPlayers.get(id);
         if (p) {
+          const oldRoom = p.roomId || 'SDN-TUMBRASANOM';
+          const newRoom = (msg.roomId ? msg.roomId.trim().toUpperCase() : oldRoom);
+
           if (msg.name) p.name = msg.name;
           if (msg.gender) p.gender = msg.gender;
           if (msg.pos) p.pos = msg.pos;
           if (msg.mode) p.mode = msg.mode;
           p.lastSeen = Date.now();
 
-          broadcast({
-            type: 'player:updated',
-            onlineCount: connectedPlayers.size,
-            player: p
-          });
+          // Room switch handling
+          if (newRoom !== oldRoom) {
+            p.roomId = newRoom;
+            socketToRoomId.set(ws, newRoom);
+
+            // Notify old room that player left
+            const oldRoomPlayers = getRoomPlayers(oldRoom);
+            broadcast({
+              type: 'player:left',
+              id,
+              roomId: oldRoom,
+              onlineCount: oldRoomPlayers.length
+            }, ws, oldRoom);
+
+            // Send full player list of new room to this player
+            const newRoomPlayers = getRoomPlayers(newRoom);
+            ws.send(JSON.stringify({
+              type: 'init',
+              yourId: id,
+              roomId: newRoom,
+              onlineCount: newRoomPlayers.length,
+              players: newRoomPlayers
+            }));
+
+            // Notify new room that player joined
+            broadcast({
+              type: 'player:joined',
+              roomId: newRoom,
+              onlineCount: newRoomPlayers.length,
+              player: p
+            }, ws, newRoom);
+          } else {
+            const roomPlayers = getRoomPlayers(newRoom);
+            broadcast({
+              type: 'player:updated',
+              roomId: newRoom,
+              onlineCount: roomPlayers.length,
+              player: p
+            }, undefined, newRoom);
+          }
         }
       }
 
       else if (msg.type === 'throw_pebble') {
         const id = socketToPlayerId.get(ws) || msg.id;
         if (!id) return;
+        const p = connectedPlayers.get(id);
+        const room = p ? p.roomId : (socketToRoomId.get(ws) || 'SDN-TUMBRASANOM');
         broadcast({
           type: 'player:threw_pebble',
           id,
+          roomId: room,
           pillarKey: msg.pillarKey || 'AQABAH',
           x: msg.x,
           y: msg.y,
           z: msg.z
-        }, ws);
+        }, ws, room);
       }
 
       else if (msg.type === 'chat') {
         const id = socketToPlayerId.get(ws) || msg.id;
+        const p = id ? connectedPlayers.get(id) : null;
+        const room = p ? p.roomId : (socketToRoomId.get(ws) || 'SDN-TUMBRASANOM');
         broadcast({
           type: 'chat',
-          id,
-          name: msg.name || 'Santri',
+          id: id || 'system',
+          roomId: room,
+          name: msg.name || (p ? p.name : 'Santri'),
           text: msg.text || '',
           x: msg.x,
           y: msg.y,
           z: msg.z
-        }, ws);
+        }, ws, room);
       }
 
       else if (msg.type === 'ping') {
@@ -271,23 +353,21 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     const id = socketToPlayerId.get(ws);
     if (id) {
+      const p = connectedPlayers.get(id);
+      const room = p ? p.roomId : (socketToRoomId.get(ws) || 'SDN-TUMBRASANOM');
       connectedPlayers.delete(id);
       socketToPlayerId.delete(ws);
-      broadcast({ type: 'player:left', id, onlineCount: connectedPlayers.size });
+      socketToRoomId.delete(ws);
+      const remainingCount = getRoomPlayers(room).length;
+      broadcast({ type: 'player:left', id, roomId: room, onlineCount: remainingCount }, undefined, room);
     }
   });
 });
 
-// Periodic cleanup of stale players (inactive > 45s)
+// Periodic cleanup of stale players (inactive > 35s)
 setInterval(() => {
-  const now = Date.now();
-  for (const [id, player] of connectedPlayers.entries()) {
-    if (now - player.lastSeen > 45000) {
-      connectedPlayers.delete(id);
-      broadcast({ type: 'player:left', id, onlineCount: connectedPlayers.size });
-    }
-  }
-}, 10000);
+  pruneInactivePlayers(35000);
+}, 8000);
 
 // Setup Vite middleware in dev or static serving in prod
 async function startServer() {
