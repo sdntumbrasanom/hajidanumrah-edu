@@ -370,23 +370,11 @@ setInterval(() => {
 }, 8000);
 
 // Setup Vite middleware in dev or static serving in prod
+// Ganti seluruh fungsi startServer() yang lama dengan yang ini:
 async function startServer() {
-  if (process.env.NODE_ENV === 'production' && fs.existsSync(path.join(__dirname, 'dist'))) {
-    app.use(express.static(path.join(__dirname, 'dist')));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-    });
-  } else {
-    const { createServer: createViteServer } = await import('vite');
-    const vite = await createViteServer({
-      server: { middlewareMode: true, hmr: false },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
-  }
-
+  // Render akan menjalankan server langsung tanpa perlu Vite
   server.listen(Number(PORT), '0.0.0.0', () => {
-    console.log(`Server listening on http://0.0.0.0:${PORT}`);
+    console.log(`Server backend berjalan di port ${PORT}`);
   });
 }
 
